@@ -268,9 +268,20 @@ export default async function handler(req, res) {
   const origin = req.headers["origin"] || "";
   const trustedOrigins = (process.env.TRUSTED_ORIGINS || "")
     .split(",")
-    .map((o) => o.trim())
+    .map((o) => o.trim().toLowerCase())
     .filter(Boolean);
-  const isTrustedOrigin = trustedOrigins.some((trusted) => origin.startsWith(trusted));
+
+  let isTrustedOrigin = false;
+  try {
+    if (origin) {
+      const hostname = new URL(origin).hostname.toLowerCase();
+      isTrustedOrigin = trustedOrigins.some(
+        (trusted) => hostname === trusted || hostname.endsWith("." + trusted)
+      );
+    }
+  } catch {
+    isTrustedOrigin = false;
+  }
 
   // Validate workshop key unless the request is from a trusted origin
   if (!isTrustedOrigin) {

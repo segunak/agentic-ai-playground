@@ -89,7 +89,7 @@ Parameters can be combined using `&`. For example: `?tools=get_current_date&key=
 | `FOUNDRY_API_KEY` | Microsoft Foundry API key |
 | `WORKSHOP_KEY` | Auth token shared with students during the session. Required when accessing from non-trusted origins. |
 | `WORKSHOP_ACTIVE` | Set to `true` to allow requests. Set to `false` to shut down all access. This is the kill switch. |
-| `TRUSTED_ORIGINS` | Comma-separated list of origins that bypass the workshop key check. Requests from these origins do not need to provide a workshop key. Leave empty to require the key from all origins. |
+| `TRUSTED_ORIGINS` | Comma-separated list of domain names that bypass the workshop key check. Uses hostname suffix matching. Leave empty to require the key from all origins. |
 
 ## Development
 
