@@ -1,3 +1,99 @@
-# Agentic AI Playground
+# Agent Playground
 
-TBD
+The interactive AI agent playground for my [**Agentic AI: From Acronyms to Applications**](https://segunakinyemi.com/blog/agentic-ai-from-acronyms-to-applications/) workshop.
+
+## What Is an Agent?
+
+There's a definition that's gained consensus in the [AI Engineering](https://www.latent.space/p/ai-engineer) community, articulated well by [Simon Willison](https://simonwillison.net/2025/Sep/18/agents/) and [Anthropic](https://www.anthropic.com/engineering/building-effective-agents):
+
+> An LLM agent runs tools in a loop to achieve a goal.
+
+**Tools** are functions the AI can call. **Loop** means it can call them multiple times, feeding results back in. **Goal** means there's a stopping condition. A chatbot just predicts the next word. An agent *does things*. This playground lets you see that in action.
+
+## What Is This?
+
+A web-based Agent Playground that lets workshop participants interact with a real AI agent powered by [Microsoft Foundry](https://learn.microsoft.com/azure/ai-foundry/what-is-foundry). The playground visualizes the agent's **tool-calling loop** in real time, showing when the AI autonomously decides to call tools, what results it gets back, and how it synthesizes a final response.
+
+This is the hands-on component of the workshop, embedded inside a [VS Code for Education](https://vscodeedu.com) course.
+
+## Architecture
+
+1. Student sends a message from the browser.
+2. A Vercel serverless function forwards it to the LLM with tool definitions.
+3. The LLM may request tool calls. If it does, the function executes those tools and feeds results back to the LLM.
+4. The LLM produces a final text response.
+5. The full reasoning trace (every step of the loop) is returned to the browser so students can watch the agent think.
+
+```mermaid
+flowchart LR
+    A["Student Browser"]:::browser
+    B["Vercel Function"]:::vercel
+    C["Microsoft Foundry LLM"]:::foundry
+    D["Execute Tools"]:::tools
+
+    A -- "1. Send message" --> B
+    B -- "2. Forward to LLM" --> C
+    C -. "3. tool_calls[]" .-> D
+    D -. "4. tool results" .-> C
+    C -- "5. Final response" --> B
+    B -- "6. Response + reasoning trace" --> A
+
+    classDef browser fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e3a5f
+    classDef vercel fill:#d1fae5,stroke:#059669,stroke-width:2px,color:#064e3b
+    classDef foundry fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#3b0764
+    classDef tools fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#78350f
+```
+
+## Tools
+
+The agent has access to three tools:
+
+| Tool | Description |
+|------|-------------|
+| `get_current_date` | Returns the current date and time |
+| `get_charlotte_weather` | Live weather and 3-day forecast for Charlotte, NC (via [Open-Meteo](https://open-meteo.com/)) |
+| `get_random_fact` | Returns a random fun fact (via [uselessfacts API](https://uselessfacts.jsph.pl/)) |
+| `get_charlotte_cinnamon_roll_rankings` | Returns my definitive cinnamon roll rankings for Charlotte, NC |
+
+Two of these tools hit live external APIs (weather and fun facts). Two return local data (date from the system clock, cinnamon rolls from my strong opinions). The LLM decides when and which tool to call autonomously. That autonomous decision-making is what makes it an agent.
+
+## URL Parameters
+
+### `?tools=`
+
+Controls which tools are visible and enabled in the playground. Accepts one of the following:
+
+- `none` - Hides all tools. The agent behaves as a bare chatbot.
+- `all` - Shows and enables all tools.
+- A comma-separated list of tool names - Shows and enables only the specified tools. Tools not in the list are hidden.
+
+Valid tool names:
+
+- `get_current_date`
+- `get_charlotte_weather`
+- `get_random_fact`
+- `get_charlotte_cinnamon_roll_rankings`
+
+### `?key=`
+
+Pre-fills the workshop key so students skip the login modal.
+
+### Combining parameters
+
+Parameters can be combined using `&`. For example: `?tools=get_current_date&key=my-secret-key`.
+
+## Environment Variables (Vercel)
+
+| Variable | Description |
+|----------|-------------|
+| `FOUNDRY_API_KEY` | Microsoft Foundry API key |
+| `WORKSHOP_KEY` | Auth token shared with students during the session. Required when accessing from non-trusted origins. |
+| `WORKSHOP_ACTIVE` | Set to `true` to allow requests. Set to `false` to shut down all access. This is the kill switch. |
+| `TRUSTED_ORIGINS` | Comma-separated list of origins that bypass the workshop key check. Requests from these origins do not need to provide a workshop key. Leave empty to require the key from all origins. |
+
+## Development
+
+```bash
+npm install
+npm run dev
+```

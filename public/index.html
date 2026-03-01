@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agent Playground  - Agentic AI Workshop</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <!-- Workshop Key Modal -->
+  <div id="key-modal" class="modal">
+    <div class="modal-content">
+      <h2>🔐 Workshop Key Required</h2>
+      <p>Enter the key shared by your workshop facilitator to get started.</p>
+      <input type="text" id="key-input" placeholder="Enter workshop key..." autocomplete="off" />
+      <button id="key-submit" onclick="submitKey()">Enter Playground</button>
+      <p id="key-error" class="error-text" style="display:none;">Invalid key. Please try again.</p>
+    </div>
+  </div>
+
+  <!-- Main App (hidden until key is entered) -->
+  <div id="app" style="display:none;">
+    <!-- Header -->
+    <header>
+      <div class="header-left">
+        <h1>🤖 Agent Playground</h1>
+        <span class="subtitle">Agentic AI: From Acronyms to Applications</span>
+      </div>
+      <div class="header-right">
+        <span class="model-badge">Microsoft Foundry</span>
+        <span class="status-badge" id="status-badge">Ready</span>
+      </div>
+    </header>
+
+    <!-- Main Layout -->
+    <main>
+      <!-- Chat Panel -->
+      <section class="chat-panel">
+        <div class="chat-messages" id="chat-messages">
+          <div class="message assistant">
+            <div class="message-avatar">🤖</div>
+            <div class="message-content">
+              <p>Hi! I'm your <strong>Data Assistant</strong>  - an AI agent built for this workshop. I can use <strong>tools</strong> to help answer your questions.</p>
+              <p>Try asking me something! For example: <em>"What is today's date?"</em></p>
+            </div>
+          </div>
+        </div>
+        <div class="chat-input-area">
+          <input type="text" id="chat-input" placeholder="Ask the agent something..."
+            onkeydown="if(event.key==='Enter')sendMessage()" autocomplete="off" />
+          <button id="send-btn" onclick="sendMessage()">Send</button>
+        </div>
+      </section>
+
+      <!-- Right Sidebar -->
+      <aside class="sidebar">
+        <!-- Tool Toggles -->
+        <div class="sidebar-section">
+          <h3>🛠️ Available Tools</h3>
+          <p class="sidebar-hint">Toggle tools on/off. The agent <strong>decides</strong> when to use them.</p>
+
+          <div class="tool-card" id="tool-card-get_current_date">
+            <div class="tool-header">
+              <span class="tool-icon">🗓️</span>
+              <span class="tool-name">get_current_date</span>
+              <label class="toggle">
+                <input type="checkbox" data-tool="get_current_date" onchange="updateTools()" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <p class="tool-desc">Gets the current date and time.</p>
+          </div>
+
+          <div class="tool-card" id="tool-card-get_charlotte_weather">
+            <div class="tool-header">
+              <span class="tool-icon">🌤️</span>
+              <span class="tool-name">get_charlotte_weather</span>
+              <label class="toggle">
+                <input type="checkbox" data-tool="get_charlotte_weather" onchange="updateTools()" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <p class="tool-desc">Live weather and 3-day forecast for Charlotte, NC.</p>
+          </div>
+
+          <div class="tool-card" id="tool-card-get_random_fact">
+            <div class="tool-header">
+              <span class="tool-icon">🎲</span>
+              <span class="tool-name">get_random_fact</span>
+              <label class="toggle">
+                <input type="checkbox" data-tool="get_random_fact" onchange="updateTools()" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <p class="tool-desc">Returns a random fun fact.</p>
+          </div>
+
+          <div class="tool-card" id="tool-card-get_charlotte_cinnamon_roll_rankings">
+            <div class="tool-header">
+              <span class="tool-icon">🧁</span>
+              <span class="tool-name">get_charlotte_cinnamon_roll_rankings</span>
+              <label class="toggle">
+                <input type="checkbox" data-tool="get_charlotte_cinnamon_roll_rankings" onchange="updateTools()" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <p class="tool-desc">Segun's cinnamon roll rankings for Charlotte, NC.</p>
+          </div>
+        </div>
+
+        <!-- Reasoning Panel -->
+        <div class="sidebar-section">
+          <h3>🧠 Agent Reasoning</h3>
+          <p class="sidebar-hint">Watch the agent's decision-making process in real time.</p>
+          <div id="reasoning-panel" class="reasoning-panel">
+            <div class="reasoning-empty">Send a message to see the agent think!</div>
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+
+</html>
