@@ -1,9 +1,12 @@
-import { streamText, tool, convertToModelMessages, UIMessage, stepCountIs } from "ai";
+import { streamText, tool, stepCountIs } from "ai";
 import { createAzure } from "@ai-sdk/azure";
 import { z } from "zod";
 
-// Allow streaming responses up to 60 seconds
-export const maxDuration = 60;
+export const config = { runtime: "edge" };
+
+// ---------------------------------------------------------------------------
+// Azure provider
+// ---------------------------------------------------------------------------
 
 const azure = createAzure({
   resourceName: "foundry-miscellaneous",
@@ -39,7 +42,7 @@ async function executeGetCharlotteWeather() {
     "&temperature_unit=fahrenheit" +
     "&wind_speed_unit=mph";
 
-  const weatherCodes: Record<number, string> = {
+  const weatherCodes = {
     0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
     45: "Foggy", 48: "Depositing rime fog",
     51: "Light drizzle", 53: "Moderate drizzle", 55: "Dense drizzle",
@@ -51,8 +54,7 @@ async function executeGetCharlotteWeather() {
 
   try {
     const response = await fetch(url);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data: any = await response.json();
+    const data = await response.json();
     const current = data.current;
     const daily = data.daily;
 
@@ -65,7 +67,7 @@ async function executeGetCharlotteWeather() {
         humidity: `${current.relative_humidity_2m}%`,
         wind: `${current.wind_speed_10m} mph`,
       },
-      forecast: daily.time.map((date: string, i: number) => ({
+      forecast: daily.time.map((date, i) => ({
         date,
         high: `${daily.temperature_2m_max[i]}F`,
         low: `${daily.temperature_2m_min[i]}F`,
@@ -74,19 +76,15 @@ async function executeGetCharlotteWeather() {
       source: "Open-Meteo API (open-meteo.com)",
     };
   } catch {
-    return {
-      city: "Charlotte, NC",
-      error: "Could not fetch live weather data.",
-    };
+    return { city: "Charlotte, NC", error: "Could not fetch live weather data." };
   }
 }
 
 async function executeGetRandomFact() {
   try {
     const response = await fetch("https://uselessfacts.jsph.pl/api/v2/facts/random?language=en");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data: any = await response.json();
-    return { fact: data.text as string, source: data.source as string };
+    const data = await response.json();
+    return { fact: data.text, source: data.source };
   } catch {
     return { fact: "A group of flamingos is called a 'flamboyance'.", source: "Fallback fact" };
   }
@@ -113,7 +111,7 @@ function executeGetCharlotteCinnamonRollRankings() {
 }
 
 // ---------------------------------------------------------------------------
-// AI SDK tool definitions (v6 uses inputSchema)
+// AI SDK tool definitions
 // ---------------------------------------------------------------------------
 
 const ALL_TOOLS = {
@@ -143,7 +141,7 @@ const ALL_TOOLS = {
 // Dynamic system prompt
 // ---------------------------------------------------------------------------
 
-function buildSystemPrompt(enabledToolNames: string[]): string {
+function buildSystemPrompt(enabledToolNames) {
   if (enabledToolNames.length === 0) {
     return `You are a Data Assistant. You can only answer from what you learned during training. You have no tools available.
 
@@ -152,7 +150,7 @@ If someone asks for real-time information like current weather or recent events 
 Be concise, friendly, and professional.`;
   }
 
-  const toolDescriptions: Record<string, string> = {
+  const toolDescriptions = {
     get_current_date: "get the current date and time",
     get_charlotte_weather: "check live weather in Charlotte, NC",
     get_random_fact: "fetch a random fun fact",
@@ -171,10 +169,10 @@ Use your tools when the user's question calls for it. When sharing cinnamon roll
 }
 
 // ---------------------------------------------------------------------------
-// Auth helpers
+// Auth
 // ---------------------------------------------------------------------------
 
-function isTrustedOrigin(origin: string): boolean {
+function isTrustedOrigin(origin) {
   const trustedOrigins = (process.env.TRUSTED_ORIGINS || "")
     .split(",")
     .map((o) => o.trim().toLowerCase())
@@ -194,61 +192,141 @@ function isTrustedOrigin(origin: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Route handler
+// Handler
 // ---------------------------------------------------------------------------
 
-export async function POST(req: Request) {
+export default async function handler(req) {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 200 });
+  }
+
+  if (req.method !== "POST") {
+    return Response.json({ error: "Method not allowed" }, { status: 405 });
+  }
+
   if (process.env.WORKSHOP_ACTIVE !== "true") {
-    return Response.json({ error: "Workshop is not currently active." }, { status: 403 });
+    return Response.json(
+      { error: "Workshop is not currently active." },
+      { status: 403 }
+    );
   }
 
   const origin = req.headers.get("origin") || "";
+  const body = await req.json();
+
   if (!isTrustedOrigin(origin)) {
-    const cloned = await req.clone().json().catch(() => ({}));
-    const workshopKey = req.headers.get("x-workshop-key") || cloned.workshopKey;
+    const workshopKey =
+      req.headers.get("x-workshop-key") || body?.workshopKey;
     if (!workshopKey || workshopKey !== process.env.WORKSHOP_KEY) {
-      return Response.json({ error: "Invalid or missing workshop key." }, { status: 401 });
+      return Response.json(
+        { error: "Invalid or missing workshop key." },
+        { status: 401 }
+      );
     }
   }
 
-  const body = await req.json();
-  const { messages = [], enabledTools = [] } = body as {
-    messages: UIMessage[];
-    enabledTools: string[];
-  };
+  const { messages = [], enabledTools = [] } = body;
 
   if (!messages.length) {
-    return Response.json({ error: "Messages array is required." }, { status: 400 });
+    return Response.json(
+      { error: "Messages array is required." },
+      { status: 400 }
+    );
   }
 
-  // Build enabled tools
-  const tools: Record<string, (typeof ALL_TOOLS)[keyof typeof ALL_TOOLS]> = {};
-  for (const name of enabledTools) {
-    if (ALL_TOOLS[name as keyof typeof ALL_TOOLS]) {
-      tools[name] = ALL_TOOLS[name as keyof typeof ALL_TOOLS];
+  try {
+    const tools = {};
+    for (const name of enabledTools) {
+      if (ALL_TOOLS[name]) {
+        tools[name] = ALL_TOOLS[name];
+      }
     }
+
+    const systemPrompt = buildSystemPrompt(enabledTools);
+
+    const result = streamText({
+      model: azure("gpt-5-mini"),
+      system: systemPrompt,
+      messages,
+      tools: Object.keys(tools).length > 0 ? tools : undefined,
+      stopWhen: stepCountIs(5),
+    });
+
+    // Stream custom SSE from fullStream for our embedded client.
+    // Events: text-delta, tool-call, tool-result, reasoning-delta, finish, error
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const part of result.fullStream) {
+            let event = null;
+
+            switch (part.type) {
+              case "text-delta":
+                event = { type: "text-delta", text: part.text };
+                break;
+              case "reasoning-delta":
+                event = { type: "reasoning-delta", text: part.text };
+                break;
+              case "tool-call":
+                event = {
+                  type: "tool-call",
+                  toolCallId: part.toolCallId,
+                  toolName: part.toolName,
+                  input: part.input,
+                };
+                break;
+              case "tool-result":
+                event = {
+                  type: "tool-result",
+                  toolCallId: part.toolCallId,
+                  toolName: part.toolName,
+                  output: part.output,
+                };
+                break;
+              case "error":
+                event = { type: "error", error: String(part.error) };
+                break;
+              case "finish":
+                event = { type: "finish" };
+                break;
+              default:
+                break;
+            }
+
+            if (event) {
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify(event)}\n\n`)
+              );
+            }
+          }
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+        } catch (error) {
+          const errEvent = { type: "error", error: error.message };
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify(errEvent)}\n\n`)
+          );
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
+    });
+  } catch (error) {
+    console.error("Chat API error:", error);
+    return Response.json(
+      {
+        error: "Something went wrong. Please try again.",
+        details: error.message,
+      },
+      { status: 500 }
+    );
   }
-
-  const systemPrompt = buildSystemPrompt(enabledTools);
-
-  const result = streamText({
-    model: azure("gpt-5-mini"),
-    system: systemPrompt,
-    messages: await convertToModelMessages(messages),
-    tools: Object.keys(tools).length > 0 ? tools : undefined,
-    stopWhen: stepCountIs(5),
-  });
-
-  return result.toUIMessageStreamResponse();
-}
-
-export async function OPTIONS() {
-  return new Response(null, {
-    status: 200,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, X-Workshop-Key",
-    },
-  });
 }

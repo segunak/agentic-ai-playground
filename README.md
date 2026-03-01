@@ -46,7 +46,7 @@ flowchart LR
 
 ## Tools
 
-The agent has access to three tools:
+The agent has access to four tools:
 
 | Tool | Description |
 |------|-------------|
@@ -57,30 +57,13 @@ The agent has access to three tools:
 
 Two of these tools hit live external APIs (weather and fun facts). Two return local data (date from the system clock, cinnamon rolls from my strong opinions). The LLM decides when and which tool to call autonomously. That autonomous decision-making is what makes it an agent.
 
-## URL Parameters
+## How It Works
 
-### `?tools=`
+The playground is embedded directly in the workshop course on [VS Code for Education](https://vscodeedu.com). Each lab page includes a standalone HTML chat client that talks to the Vercel API. Students click the green play button in VS Code for Education to open the chat, and the enabled tools are configured per-lab:
 
-Controls which tools are visible and enabled in the playground. Accepts one of the following:
-
-- `none` - Hides all tools. The agent behaves as a bare chatbot.
-- `all` - Shows and enables all tools.
-- A comma-separated list of tool names - Shows and enables only the specified tools. Tools not in the list are hidden.
-
-Valid tool names:
-
-- `get_current_date`
-- `get_charlotte_weather`
-- `get_random_fact`
-- `get_charlotte_cinnamon_roll_rankings`
-
-### `?key=`
-
-Pre-fills the workshop key so students skip the login modal.
-
-### Combining parameters
-
-Parameters can be combined using `&`. For example: `?tools=get_current_date&key=my-secret-key`.
+- **Lab 1**: No tools (bare chatbot)
+- **Lab 2**: Weather tool only
+- **Lab 3**: All 4 tools (full agent)
 
 ## Environment Variables (Vercel)
 
