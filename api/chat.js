@@ -230,20 +230,35 @@ const TOOL_EXECUTORS = {
 };
 
 // ---------------------------------------------------------------------------
-// System prompt
+// System prompt - dynamically built based on which tools are enabled
 // ---------------------------------------------------------------------------
 
-const SYSTEM_PROMPT = `You are a Data Assistant - a helpful AI agent built for a workshop called "Agentic AI: From Acronyms to Applications" by Segun Akinyemi.
+function buildSystemPrompt(enabledToolNames) {
+  if (enabledToolNames.length === 0) {
+    return `You are a Data Assistant. You can only answer from what you learned during training. You have no tools available.
 
-You have tools to get the current date, check Charlotte NC weather, fetch random fun facts, and look up cinnamon roll rankings.
+If someone asks for real-time information like today's date or current weather, be honest that you're working from training data and may not have current information. Do your best to help with what you know.
 
-IMPORTANT RULES:
-- Use your tools when the user's question calls for real-time info, weather, trivia, or food recommendations.
-- When you DON'T have a tool that can help, answer from your general knowledge if possible, or say honestly that you can't help with that specific request.
-- Be concise, friendly, and professional.
-- When sharing cinnamon roll rankings, be enthusiastic and share the hot take - it's part of the fun!
-- If someone asks about the date or time, ALWAYS use the get_current_date tool rather than guessing.
-- If someone asks about weather, ALWAYS use the get_charlotte_weather tool rather than guessing.`;
+Be concise, friendly, and professional.`;
+  }
+
+  const toolDescriptions = {
+    get_current_date: "get the current date and time",
+    get_charlotte_weather: "check live weather in Charlotte, NC",
+    get_random_fact: "fetch a random fun fact",
+    get_charlotte_cinnamon_roll_rankings: "look up cinnamon roll rankings for Charlotte, NC",
+  };
+
+  const available = enabledToolNames
+    .filter((name) => toolDescriptions[name])
+    .map((name) => toolDescriptions[name]);
+
+  return `You are a Data Assistant built for the workshop "Agentic AI: From Acronyms to Applications" by Segun Akinyemi.
+
+You have ${available.length} tool${available.length === 1 ? "" : "s"} available: ${available.join(", ")}.
+
+Use your tools when the user's question calls for it. When sharing cinnamon roll rankings, be enthusiastic and share the hot take. Be concise, friendly, and professional.`;
+}
 
 // ---------------------------------------------------------------------------
 // Main handler
@@ -310,9 +325,10 @@ export default async function handler(req, res) {
       .filter((name) => TOOL_DEFINITIONS[name])
       .map((name) => TOOL_DEFINITIONS[name]);
 
-    // Build the conversation with system prompt
+    // Build the conversation with a dynamic system prompt
+    const systemPrompt = buildSystemPrompt(enabledTools);
     const conversationMessages = [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: systemPrompt },
       ...messages,
     ];
 
@@ -400,11 +416,19 @@ export default async function handler(req, res) {
       }
 
       // Model returned a final text response  - we're done
-      const responseText = choice.message.content || "I couldn't generate a response.";
-      reasoning.push({ type: "response", content: responseText });
+      const responseText = choice.message.content;
+
+      // Reasoning models sometimes return empty content. Retry once.
+      if (!responseText && iteration < MAX_ITERATIONS) {
+        reasoning.push({ type: "thinking", content: "Generating response..." });
+        continue;
+      }
+
+      const finalText = responseText || "I'm not sure how to respond to that. Could you try rephrasing?";
+      reasoning.push({ type: "response", content: finalText });
 
       return res.status(200).json({
-        response: responseText,
+        response: finalText,
         reasoning: reasoning,
       });
     }
