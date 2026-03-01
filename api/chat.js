@@ -331,7 +331,7 @@ export default async function handler(req, res) {
         model: "gpt-5-mini",
         messages: conversationMessages,
         temperature: 0.7,
-        max_tokens: 1024,
+        max_completion_tokens: 1024,
       };
 
       // Only include tools if any are enabled
