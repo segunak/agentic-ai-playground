@@ -1,6 +1,7 @@
 /* ===================================================================
-   Agent Playground  - Client Logic
-   Chat, tool toggles, reasoning panel, URL param configuration
+   Agent Playground - Client Logic
+   Streaming via Vercel AI SDK data protocol
+   Persistent reasoning panel across conversation turns
    =================================================================== */
 
 // ---------------------------------------------------------------------------
@@ -8,38 +9,30 @@
 // ---------------------------------------------------------------------------
 
 let workshopKey = "";
-let conversationHistory = []; // Messages sent to the API
-let enabledTools = [];        // Currently enabled tool names
+let conversationHistory = [];
+let enabledTools = [];
 let isLoading = false;
+let turnCount = 0;
 
-// API base  - when embedded in VS Code for Education, use the Vercel URL
 const API_BASE = getApiBase();
 
 function getApiBase() {
-  // If running on the Vercel deployment, use relative paths
   if (
     window.location.hostname === "agentic-ai-playground.vercel.app" ||
     window.location.hostname === "localhost"
   ) {
     return "";
   }
-  // If embedded elsewhere (VS Code for Education), use the full Vercel URL
   return "https://agentic-ai-playground.vercel.app";
 }
 
 // ---------------------------------------------------------------------------
 // URL Parameter Configuration
 // ---------------------------------------------------------------------------
-// ?tools=none                              - All tools hidden/off
-// ?tools=all                               - All tools shown and on
-// ?tools=get_current_date                  - Only that tool shown and on
-// ?tools=get_current_date,get_random_fact  - Comma-separated list
-// ?key=<workshopkey>                       - Auto-fill workshop key
 
 function applyUrlConfig() {
   const params = new URLSearchParams(window.location.search);
 
-  // Auto-fill key if provided (for VS Code for Education embedding)
   const keyParam = params.get("key");
   if (keyParam) {
     workshopKey = keyParam;
@@ -47,27 +40,23 @@ function applyUrlConfig() {
     document.getElementById("app").style.display = "block";
   }
 
-  // Tool configuration
   const toolsParam = params.get("tools");
   if (toolsParam) {
     const toolCheckboxes = document.querySelectorAll("[data-tool]");
 
     if (toolsParam === "none") {
-      // Hide all tool cards
       toolCheckboxes.forEach((cb) => {
         cb.checked = false;
         const card = document.getElementById("tool-card-" + cb.dataset.tool);
         if (card) card.style.display = "none";
       });
     } else if (toolsParam === "all") {
-      // Show and enable all tools
       toolCheckboxes.forEach((cb) => {
         cb.checked = true;
         const card = document.getElementById("tool-card-" + cb.dataset.tool);
         if (card) card.style.display = "";
       });
     } else {
-      // Comma-separated list of specific tool names to enable
       const enabledSet = new Set(toolsParam.split(",").map((t) => t.trim()));
       toolCheckboxes.forEach((cb) => {
         const card = document.getElementById("tool-card-" + cb.dataset.tool);
@@ -102,8 +91,6 @@ function submitKey() {
   try { localStorage.setItem("wk", key); } catch (e) {}
   document.getElementById("key-modal").style.display = "none";
   document.getElementById("app").style.display = "block";
-
-  // Focus the chat input
   document.getElementById("chat-input").focus();
 }
 
@@ -113,9 +100,7 @@ function showKeyError(msg) {
   el.style.display = "block";
 }
 
-// Allow Enter key on key input
 document.addEventListener("DOMContentLoaded", () => {
-  // Check localStorage for a saved workshop key
   const savedKey = localStorage.getItem("wk");
   if (savedKey) {
     workshopKey = savedKey;
@@ -148,7 +133,7 @@ function updateTools() {
 }
 
 // ---------------------------------------------------------------------------
-// Chat
+// Chat - Streaming
 // ---------------------------------------------------------------------------
 
 async function sendMessage() {
@@ -157,17 +142,23 @@ async function sendMessage() {
 
   if (!text || isLoading) return;
 
-  // Add user message to UI
   appendMessage("user", text);
   input.value = "";
 
-  // Add to conversation history
   conversationHistory.push({ role: "user", content: text });
 
-  // Set loading state
   setLoading(true);
-  clearReasoning();
-  addReasoningStep("thinking", "🤔 Thinking", "Processing your message...");
+
+  // Add turn divider to reasoning panel
+  turnCount++;
+  if (turnCount > 1) {
+    addReasoningDivider();
+  }
+  addReasoningStep("thinking", "Thinking", "Processing your message...");
+
+  // Create a placeholder for the streaming assistant response
+  const assistantBubble = createAssistantBubble();
+  let fullResponse = "";
 
   try {
     const response = await fetch(`${API_BASE}/api/chat`, {
@@ -184,41 +175,132 @@ async function sendMessage() {
     });
 
     if (response.status === 401) {
-      appendMessage(
-        "assistant",
-        "⚠️ Invalid workshop key. Please refresh the page and try again with the correct key."
-      );
+      updateAssistantBubble(assistantBubble, "Invalid workshop key. Please refresh and try again.");
+      setLoading(false);
+      return;
+    }
+
+    if (response.status === 403) {
+      updateAssistantBubble(assistantBubble, "Workshop is not currently active.");
       setLoading(false);
       return;
     }
 
     if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.error || `HTTP ${response.status}`);
+      throw new Error(`HTTP ${response.status}`);
     }
 
-    const data = await response.json();
+    // Parse AI SDK data stream
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
 
-    // Render reasoning steps
-    clearReasoning();
-    renderReasoningSteps(data.reasoning || []);
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
 
-    // Highlight tools that were called
-    highlightCalledTools(data.reasoning || []);
+      buffer += decoder.decode(value, { stream: true });
 
-    // Add assistant response to UI and history
-    appendMessage("assistant", data.response);
-    conversationHistory.push({ role: "assistant", content: data.response });
+      // Process complete lines from the AI SDK data protocol
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        processStreamLine(line, assistantBubble, (chunk) => {
+          fullResponse += chunk;
+          updateAssistantBubble(assistantBubble, fullResponse);
+        });
+      }
+    }
+
+    // Process any remaining buffer
+    if (buffer.trim()) {
+      processStreamLine(buffer, assistantBubble, (chunk) => {
+        fullResponse += chunk;
+        updateAssistantBubble(assistantBubble, fullResponse);
+      });
+    }
+
+    if (!fullResponse) {
+      fullResponse = "I'm not sure how to respond to that. Could you try rephrasing?";
+      updateAssistantBubble(assistantBubble, fullResponse);
+    }
+
+    conversationHistory.push({ role: "assistant", content: fullResponse });
+    addReasoningStep("response", "Response complete", "");
+
   } catch (error) {
     console.error("Chat error:", error);
-    appendMessage(
-      "assistant",
-      `⚠️ Something went wrong: ${error.message}. Please try again.`
-    );
-    addReasoningStep("response", "❌ Error", error.message);
+    updateAssistantBubble(assistantBubble, `Something went wrong: ${error.message}. Please try again.`);
+    addReasoningStep("response", "Error", error.message);
   }
 
   setLoading(false);
+}
+
+// ---------------------------------------------------------------------------
+// AI SDK Data Protocol Parser
+// ---------------------------------------------------------------------------
+
+function processStreamLine(line, bubble, onTextChunk) {
+  // AI SDK data protocol format:
+  // 0:string - text delta
+  // 9:{...} - tool call begin
+  // a:{...} - tool call delta
+  // b:{...} - tool result
+  // e:{...} - finish step
+  // d:{...} - finish message
+
+  const colonIndex = line.indexOf(":");
+  if (colonIndex === -1) return;
+
+  const type = line.substring(0, colonIndex);
+  const payload = line.substring(colonIndex + 1);
+
+  try {
+    switch (type) {
+      case "0": {
+        // Text delta - payload is a JSON string
+        const text = JSON.parse(payload);
+        onTextChunk(text);
+        break;
+      }
+      case "9": {
+        // Tool call begin
+        const data = JSON.parse(payload);
+        addReasoningStep("tool-call", `Calling: ${data.toolName}`, "");
+        highlightTool(data.toolName);
+        break;
+      }
+      case "a": {
+        // Tool call delta (args streaming) - ignore for UI
+        break;
+      }
+      case "b": {
+        // Tool result
+        const data = JSON.parse(payload);
+        const preview = JSON.stringify(data.result, null, 1);
+        addReasoningStep(
+          "tool-result",
+          `Result from ${data.toolName}`,
+          preview.length > 200 ? preview.slice(0, 200) + "..." : preview
+        );
+        addReasoningStep("thinking", "Thinking", "Analyzing tool results...");
+        break;
+      }
+      case "e": {
+        // Finish step - multi-step boundary
+        break;
+      }
+      case "d": {
+        // Finish message
+        break;
+      }
+    }
+  } catch {
+    // Ignore parse errors on partial data
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -232,7 +314,7 @@ function appendMessage(role, content) {
 
   const avatar = document.createElement("div");
   avatar.className = "message-avatar";
-  avatar.textContent = role === "user" ? "You" : "🤖";
+  avatar.textContent = role === "user" ? "You" : "\u{1F916}";
 
   const contentDiv = document.createElement("div");
   contentDiv.className = "message-content";
@@ -241,25 +323,48 @@ function appendMessage(role, content) {
   div.appendChild(avatar);
   div.appendChild(contentDiv);
   container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
 
-  // Auto-scroll
+function createAssistantBubble() {
+  const container = document.getElementById("chat-messages");
+  const div = document.createElement("div");
+  div.className = "message assistant";
+
+  const avatar = document.createElement("div");
+  avatar.className = "message-avatar";
+  avatar.textContent = "\u{1F916}";
+
+  const contentDiv = document.createElement("div");
+  contentDiv.className = "message-content";
+  contentDiv.innerHTML = '<span class="loading-dots">Thinking</span>';
+
+  div.appendChild(avatar);
+  div.appendChild(contentDiv);
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+
+  return contentDiv;
+}
+
+function updateAssistantBubble(bubble, content) {
+  bubble.innerHTML = formatContent(content);
+  const container = document.getElementById("chat-messages");
   container.scrollTop = container.scrollHeight;
 }
 
 function formatContent(text) {
-  // Basic markdown-ish formatting
   return text
     .split("\n")
     .map((line) => {
-      // Bold
       line = line.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-      // Inline code
-      line = line.replace(/`(.*?)`/g, '<code style="background:var(--bg-tertiary);padding:1px 4px;border-radius:3px;font-size:0.85em;">$1</code>');
-      // Bullet points
-      if (line.startsWith("- ") || line.startsWith("• ")) {
-        return `<div style="padding-left:12px;">• ${line.slice(2)}</div>`;
+      line = line.replace(
+        /`(.*?)`/g,
+        '<code style="background:var(--bg-tertiary);padding:1px 4px;border-radius:3px;font-size:0.85em;">$1</code>'
+      );
+      if (line.startsWith("- ") || line.startsWith("\u2022 ")) {
+        return `<div style="padding-left:12px;">\u2022 ${line.slice(2)}</div>`;
       }
-      // Numbered lists
       const numMatch = line.match(/^(\d+)\.\s(.*)/);
       if (numMatch) {
         return `<div style="padding-left:12px;">${numMatch[1]}. ${numMatch[2]}</div>`;
@@ -284,26 +389,37 @@ function setLoading(loading) {
 }
 
 // ---------------------------------------------------------------------------
-// Reasoning Panel
+// Reasoning Panel - Persistent across turns
 // ---------------------------------------------------------------------------
 
-function clearReasoning() {
+function addReasoningDivider() {
   const panel = document.getElementById("reasoning-panel");
-  panel.innerHTML = "";
+  const empty = panel.querySelector(".reasoning-empty");
+  if (empty) empty.remove();
+
+  const divider = document.createElement("hr");
+  divider.className = "reasoning-divider";
+  panel.appendChild(divider);
+  panel.scrollTop = panel.scrollHeight;
 }
 
 function addReasoningStep(type, label, detail) {
   const panel = document.getElementById("reasoning-panel");
-
-  // Remove the empty state message if present
   const empty = panel.querySelector(".reasoning-empty");
   if (empty) empty.remove();
 
   const step = document.createElement("div");
   step.className = `reasoning-step ${type}`;
 
+  const icons = {
+    "thinking": "\u{1F914}",
+    "tool-call": "\u{1F527}",
+    "tool-result": "\u{1F4CB}",
+    "response": "\u{1F4AC}",
+  };
+
   step.innerHTML = `
-    <span class="step-label">${label}</span>
+    <span class="step-label">${icons[type] || ""} ${label}</span>
     ${detail ? `<span class="step-detail">${detail}</span>` : ""}
   `;
 
@@ -311,63 +427,14 @@ function addReasoningStep(type, label, detail) {
   panel.scrollTop = panel.scrollHeight;
 }
 
-function renderReasoningSteps(steps) {
-  for (const step of steps) {
-    switch (step.type) {
-      case "thinking":
-        addReasoningStep("thinking", "🤔 Thinking", step.content);
-        break;
-
-      case "tool_call": {
-        const argsStr = step.args && Object.keys(step.args).length > 0
-          ? `(${JSON.stringify(step.args)})`
-          : "()";
-        addReasoningStep("tool-call", `🔧 Calling tool: ${step.tool}`, argsStr);
-        break;
-      }
-
-      case "tool_result": {
-        let preview = "";
-        if (step.result) {
-          const resultStr = JSON.stringify(step.result, null, 1);
-          preview = resultStr.length > 200
-            ? resultStr.slice(0, 200) + "..."
-            : resultStr;
-        }
-        addReasoningStep("tool-result", `📋 Result from ${step.tool}`, preview);
-        break;
-      }
-
-      case "response":
-        addReasoningStep(
-          "response",
-          "💬 Final Response",
-          step.content.length > 100
-            ? step.content.slice(0, 100) + "..."
-            : step.content
-        );
-        break;
-    }
-  }
-}
-
-function highlightCalledTools(steps) {
-  // Reset all highlights
+function highlightTool(toolName) {
   document.querySelectorAll(".tool-card").forEach((card) => {
     card.classList.remove("highlighted");
   });
 
-  // Highlight tools that were called
-  const called = new Set(
-    steps.filter((s) => s.type === "tool_call").map((s) => s.tool)
-  );
-
-  for (const toolName of called) {
-    const card = document.getElementById("tool-card-" + toolName);
-    if (card) {
-      card.classList.add("highlighted");
-      // Remove highlight after 3 seconds
-      setTimeout(() => card.classList.remove("highlighted"), 3000);
-    }
+  const card = document.getElementById("tool-card-" + toolName);
+  if (card) {
+    card.classList.add("highlighted");
+    setTimeout(() => card.classList.remove("highlighted"), 3000);
   }
 }
