@@ -330,7 +330,6 @@ export default async function handler(req, res) {
       const completionParams = {
         model: "gpt-5-mini",
         messages: conversationMessages,
-        temperature: 0.7,
         max_completion_tokens: 1024,
       };
 
