@@ -65,13 +65,59 @@ async function executeGetCharlotteWeather() {
   }
 }
 
-async function executeGetRandomFact() {
+async function executeGetPeopleInSpace() {
   try {
-    const response = await fetch("https://uselessfacts.jsph.pl/api/v2/facts/random?language=en");
+    const response = await fetch("http://api.open-notify.org/astros.json");
     const data = await response.json();
-    return { fact: data.text, source: data.source };
+
+    const byCraft = {};
+    for (const person of data.people) {
+      if (!byCraft[person.craft]) byCraft[person.craft] = [];
+      byCraft[person.craft].push(person.name);
+    }
+
+    return {
+      total: data.number,
+      craft: Object.entries(byCraft).map(([craft, crew]) => ({
+        craft,
+        crewCount: crew.length,
+        crew,
+      })),
+      source: "Open Notify API (open-notify.org)",
+    };
   } catch {
-    return { fact: "A group of flamingos is called a 'flamboyance'.", source: "Fallback fact" };
+    return { error: "Could not fetch data about people in space." };
+  }
+}
+
+async function executeGetRecentEarthquakes() {
+  try {
+    const response = await fetch(
+      "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_week.geojson"
+    );
+    const data = await response.json();
+
+    if (!data.features || data.features.length === 0) {
+      return {
+        count: 0,
+        message: "No significant earthquakes recorded in the past 7 days.",
+        source: "USGS Earthquake Hazards Program (earthquake.usgs.gov)",
+      };
+    }
+
+    return {
+      count: data.features.length,
+      earthquakes: data.features.slice(0, 10).map((f) => ({
+        magnitude: f.properties.mag,
+        location: f.properties.place,
+        time: new Date(f.properties.time).toUTCString(),
+        tsunami: f.properties.tsunami ? "Yes" : "No",
+        url: f.properties.url,
+      })),
+      source: "USGS Earthquake Hazards Program (earthquake.usgs.gov)",
+    };
+  } catch {
+    return { error: "Could not fetch earthquake data." };
   }
 }
 
@@ -105,10 +151,15 @@ const ALL_TOOLS = {
     inputSchema: z.object({}),
     execute: async () => executeGetCharlotteWeather(),
   }),
-  get_random_fact: tool({
-    description: "Returns a random fun fact. Use when someone asks for something interesting, a fun fact, trivia, or just wants to be entertained.",
+  get_people_in_space: tool({
+    description: "Gets the list of people currently in space right now, including their names and which spacecraft they are on. Use when someone asks who is in space, about astronauts, the ISS, or space stations.",
     inputSchema: z.object({}),
-    execute: async () => executeGetRandomFact(),
+    execute: async () => executeGetPeopleInSpace(),
+  }),
+  get_recent_earthquakes: tool({
+    description: "Gets significant earthquakes from the past 7 days worldwide. Use when someone asks about earthquakes, seismic activity, or natural disasters.",
+    inputSchema: z.object({}),
+    execute: async () => executeGetRecentEarthquakes(),
   }),
   get_charlotte_cinnamon_roll_rankings: tool({
     description: "Returns Segun Akinyemi's definitive cinnamon roll rankings for Charlotte, NC. Use when someone asks about food, bakeries, cinnamon rolls, dessert recommendations, or things to eat in Charlotte.",
@@ -132,7 +183,8 @@ Be concise, friendly, and professional.`;
 
   const toolDescriptions = {
     get_charlotte_weather: "check live weather in Charlotte, NC",
-    get_random_fact: "fetch a random fun fact",
+    get_people_in_space: "find out who is currently in space",
+    get_recent_earthquakes: "check for significant recent earthquakes worldwide",
     get_charlotte_cinnamon_roll_rankings: "look up cinnamon roll rankings for Charlotte, NC",
   };
 
