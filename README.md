@@ -46,16 +46,15 @@ flowchart LR
 
 ## Tools
 
-The agent has access to four tools:
+The agent has access to three tools:
 
 | Tool | Description |
 |------|-------------|
-| `get_current_date` | Returns the current date and time |
 | `get_charlotte_weather` | Live weather and 3-day forecast for Charlotte, NC (via [Open-Meteo](https://open-meteo.com/)) |
 | `get_random_fact` | Returns a random fun fact (via [uselessfacts API](https://uselessfacts.jsph.pl/)) |
 | `get_charlotte_cinnamon_roll_rankings` | Returns my definitive cinnamon roll rankings for Charlotte, NC |
 
-Two of these tools hit live external APIs (weather and fun facts). Two return local data (date from the system clock, cinnamon rolls from my strong opinions). The LLM decides when and which tool to call autonomously. That autonomous decision-making is what makes it an agent.
+Two of these tools hit live external APIs (weather and fun facts). One returns local data (cinnamon rolls from my strong opinions). The LLM decides when and which tool to call autonomously. That autonomous decision-making is what makes it an agent.
 
 ## How It Works
 

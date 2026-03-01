@@ -17,21 +17,6 @@ const azure = createAzure({
 // Tool implementations
 // ---------------------------------------------------------------------------
 
-function executeGetCurrentDate() {
-  const now = new Date();
-  return {
-    date: now.toISOString().split("T")[0],
-    time: now.toTimeString().split(" ")[0],
-    timezone: "UTC",
-    formatted: now.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    }),
-  };
-}
-
 async function executeGetCharlotteWeather() {
   const url =
     "https://api.open-meteo.com/v1/forecast?" +
@@ -115,11 +100,6 @@ function executeGetCharlotteCinnamonRollRankings() {
 // ---------------------------------------------------------------------------
 
 const ALL_TOOLS = {
-  get_current_date: tool({
-    description: "Gets the current date and time. Use when the user asks about today's date, the current time, or anything requiring knowledge of the current moment.",
-    inputSchema: z.object({}),
-    execute: async () => executeGetCurrentDate(),
-  }),
   get_charlotte_weather: tool({
     description: "Gets the current weather and 3-day forecast for Charlotte, North Carolina. Use when someone asks about Charlotte weather, temperature, what to wear, or outdoor conditions.",
     inputSchema: z.object({}),
@@ -151,7 +131,6 @@ Be concise, friendly, and professional.`;
   }
 
   const toolDescriptions = {
-    get_current_date: "get the current date and time",
     get_charlotte_weather: "check live weather in Charlotte, NC",
     get_random_fact: "fetch a random fun fact",
     get_charlotte_cinnamon_roll_rankings: "look up cinnamon roll rankings for Charlotte, NC",
