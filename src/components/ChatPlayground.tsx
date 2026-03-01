@@ -45,16 +45,22 @@ export default function ChatPlayground() {
     setReasoningSteps((prev) => [...prev, step]);
   }, []);
 
+  // Use refs so transport functions always read current values
+  const workshopKeyRef = useRef(workshopKey);
+  const enabledToolsRef = useRef(enabledTools);
+  useEffect(() => { workshopKeyRef.current = workshopKey; }, [workshopKey]);
+  useEffect(() => { enabledToolsRef.current = enabledTools; }, [enabledTools]);
+
   const { messages, sendMessage, status, error } = useChat({
     transport: new DefaultChatTransport({
       api: "/api/chat",
-      headers: {
-        "X-Workshop-Key": workshopKey || "",
-      },
-      body: {
-        enabledTools: Array.from(enabledTools),
-        workshopKey: workshopKey || "",
-      },
+      headers: () => ({
+        "X-Workshop-Key": workshopKeyRef.current || "",
+      }),
+      body: () => ({
+        enabledTools: Array.from(enabledToolsRef.current),
+        workshopKey: workshopKeyRef.current || "",
+      }),
     }),
     onToolCall: ({ toolCall }) => {
       if (toolCall.dynamic) return;
