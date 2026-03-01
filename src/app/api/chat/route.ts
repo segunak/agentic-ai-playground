@@ -1,4 +1,4 @@
-import { streamText, tool, convertToModelMessages, UIMessage, stepCountIs, type ModelMessage } from "ai";
+import { streamText, tool, convertToModelMessages, UIMessage, stepCountIs } from "ai";
 import { createAzure } from "@ai-sdk/azure";
 import { z } from "zod";
 
@@ -231,26 +231,15 @@ export async function POST(req: Request) {
 
   const systemPrompt = buildSystemPrompt(enabledTools);
 
-  // Convert messages to model format
-  // UIMessages from useChat have 'parts', plain messages from embedded HTML don't
-  const isUIMessageFormat = messages.length > 0 && messages[0].parts !== undefined;
-  const modelMessages: ModelMessage[] = isUIMessageFormat
-    ? await convertToModelMessages(messages)
-    : (messages as unknown as ModelMessage[]);
-
   const result = streamText({
     model: azure("gpt-5-mini"),
     system: systemPrompt,
-    messages: modelMessages,
+    messages: await convertToModelMessages(messages),
     tools: Object.keys(tools).length > 0 ? tools : undefined,
     stopWhen: stepCountIs(5),
   });
 
-  // Use UIMessage stream for useChat clients, data stream for embedded HTML clients
-  if (isUIMessageFormat) {
-    return result.toUIMessageStreamResponse();
-  }
-  return result.toTextStreamResponse();
+  return result.toUIMessageStreamResponse();
 }
 
 export async function OPTIONS() {

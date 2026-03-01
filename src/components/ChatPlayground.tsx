@@ -13,7 +13,6 @@ export default function ChatPlayground() {
   const [enabledTools, setEnabledTools] = useState<Set<string>>(new Set());
   const [highlightedTool, setHighlightedTool] = useState<string | null>(null);
   const [reasoningSteps, setReasoningSteps] = useState<ReasoningStep[]>([]);
-  const [turnCount, setTurnCount] = useState(0);
   const [inputValue, setInputValue] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -82,22 +81,53 @@ export default function ChatPlayground() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Track turns for reasoning dividers and add thinking step
-  const prevMessageCountRef = useRef(0);
-  useEffect(() => {
-    if (messages.length > prevMessageCountRef.current) {
-      const lastMsg = messages[messages.length - 1];
-      if (lastMsg.role === "user") {
-        setTurnCount((prev) => {
-          const next = prev + 1;
-          if (next > 1) addReasoning({ type: "divider" });
-          addReasoning({ type: "thinking", label: "Thinking", detail: "Processing your message..." });
-          return next;
-        });
+  // Derive reasoning steps from message parts (tool calls and results)
+  // This is data-driven, not event-driven, so it's always accurate
+  const derivedReasoningSteps: ReasoningStep[] = [];
+  let turnIdx = 0;
+  for (const m of messages) {
+    if (m.role === "user") {
+      turnIdx++;
+      if (turnIdx > 1) derivedReasoningSteps.push({ type: "divider" });
+      derivedReasoningSteps.push({ type: "thinking", label: "Thinking", detail: "Processing message..." });
+    }
+    if (m.role === "assistant") {
+      for (const part of m.parts) {
+        if (part.type === "step-start") {
+          // Multi-step boundary
+        } else if (part.type.startsWith("tool-")) {
+          const toolPart = part as { type: string; toolName: string; state: string; input?: unknown; output?: unknown };
+          if (toolPart.state === "input-available" || toolPart.state === "input-streaming") {
+            derivedReasoningSteps.push({
+              type: "tool-call",
+              label: `Calling: ${toolPart.toolName}`,
+              detail: toolPart.input ? JSON.stringify(toolPart.input) : "",
+            });
+          }
+          if (toolPart.state === "output-available") {
+            const preview = JSON.stringify(toolPart.output, null, 1);
+            derivedReasoningSteps.push({
+              type: "tool-result",
+              label: `Result from ${toolPart.toolName}`,
+              detail: preview.length > 200 ? preview.slice(0, 200) + "..." : preview,
+            });
+            derivedReasoningSteps.push({ type: "thinking", label: "Thinking", detail: "Analyzing tool results..." });
+          }
+        } else if (part.type === "text" && part.text) {
+          // Only add "Response complete" once at the end if we had tool calls
+          // (detected by checking if there are any tool steps before this)
+        }
       }
     }
-    prevMessageCountRef.current = messages.length;
-  }, [messages, addReasoning]);
+  }
+  // If we're streaming and last message is assistant, show "streaming" indicator
+  if (status === "streaming") {
+    derivedReasoningSteps.push({ type: "thinking", label: "Generating response...", detail: "" });
+  }
+  // If last assistant message is complete and had content, mark response done
+  if (status === "ready" && messages.length > 0 && messages[messages.length - 1]?.role === "assistant") {
+    derivedReasoningSteps.push({ type: "response", label: "Response complete" });
+  }
 
   const toggleTool = (id: string) => {
     setEnabledTools((prev) => {
