@@ -50,7 +50,7 @@ The agent has access to four tools:
 
 | Tool | Description |
 |------|-------------|
-| `get_charlotte_weather` | Live weather and 3-day forecast for Charlotte, NC (via [Open-Meteo](https://open-meteo.com/)) |
+| `get_weather` | Live weather and 3-day forecast for any city worldwide (via [Open-Meteo](https://open-meteo.com/)) |
 | `get_people_in_space` | Who is currently in space right now (via [Open Notify](http://open-notify.org/)) |
 | `get_recent_earthquakes` | Significant earthquakes from the past 7 days worldwide (via [USGS](https://earthquake.usgs.gov/)) |
 | `get_charlotte_cinnamon_roll_rankings` | Returns my definitive cinnamon roll rankings for Charlotte, NC |

@@ -17,16 +17,7 @@ const azure = createAzure({
 // Tool implementations
 // ---------------------------------------------------------------------------
 
-async function executeGetCharlotteWeather() {
-  const url =
-    "https://api.open-meteo.com/v1/forecast?" +
-    "latitude=35.2271&longitude=-80.8431" +
-    "&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m" +
-    "&daily=temperature_2m_max,temperature_2m_min,weather_code" +
-    "&forecast_days=3" +
-    "&temperature_unit=fahrenheit" +
-    "&wind_speed_unit=mph";
-
+async function executeGetWeather(city) {
   const weatherCodes = {
     0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
     45: "Foggy", 48: "Depositing rime fog",
@@ -38,13 +29,35 @@ async function executeGetCharlotteWeather() {
   };
 
   try {
+    // Geocode the city name to lat/long
+    const geoResponse = await fetch(
+      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en`
+    );
+    const geoData = await geoResponse.json();
+
+    if (!geoData.results || geoData.results.length === 0) {
+      return { city, error: `Could not find location: ${city}` };
+    }
+
+    const loc = geoData.results[0];
+    const cityName = `${loc.name}${loc.admin1 ? ", " + loc.admin1 : ""}${loc.country ? ", " + loc.country : ""}`;
+
+    const url =
+      `https://api.open-meteo.com/v1/forecast?` +
+      `latitude=${loc.latitude}&longitude=${loc.longitude}` +
+      `&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m` +
+      `&daily=temperature_2m_max,temperature_2m_min,weather_code` +
+      `&forecast_days=3` +
+      `&temperature_unit=fahrenheit` +
+      `&wind_speed_unit=mph`;
+
     const response = await fetch(url);
     const data = await response.json();
     const current = data.current;
     const daily = data.daily;
 
     return {
-      city: "Charlotte, NC",
+      city: cityName,
       current: {
         temperature: `${current.temperature_2m}F`,
         feels_like: `${current.apparent_temperature}F`,
@@ -61,7 +74,7 @@ async function executeGetCharlotteWeather() {
       source: "Open-Meteo API (open-meteo.com)",
     };
   } catch {
-    return { city: "Charlotte, NC", error: "Could not fetch live weather data." };
+    return { city, error: "Could not fetch live weather data." };
   }
 }
 
@@ -146,10 +159,12 @@ function executeGetCharlotteCinnamonRollRankings() {
 // ---------------------------------------------------------------------------
 
 const ALL_TOOLS = {
-  get_charlotte_weather: tool({
-    description: "Gets the current weather and 3-day forecast for Charlotte, North Carolina. Use when someone asks about Charlotte weather, temperature, what to wear, or outdoor conditions.",
-    inputSchema: z.object({}),
-    execute: async () => executeGetCharlotteWeather(),
+  get_weather: tool({
+    description: "Gets the current weather and 3-day forecast for any city. Use when someone asks about weather, temperature, what to wear, or outdoor conditions anywhere in the world.",
+    inputSchema: z.object({
+      city: z.string().describe("The city name to get weather for, e.g. Charlotte, Austin, London, Tokyo"),
+    }),
+    execute: async ({ city }) => executeGetWeather(city),
   }),
   get_people_in_space: tool({
     description: "Gets the list of people currently in space right now, including their names and which spacecraft they are on. Use when someone asks who is in space, about astronauts, the ISS, or space stations.",
@@ -182,7 +197,7 @@ Be concise, friendly, and professional.`;
   }
 
   const toolDescriptions = {
-    get_charlotte_weather: "check live weather in Charlotte, NC",
+    get_weather: "check live weather for any city",
     get_people_in_space: "find out who is currently in space",
     get_recent_earthquakes: "check for significant recent earthquakes worldwide",
     get_charlotte_cinnamon_roll_rankings: "look up cinnamon roll rankings for Charlotte, NC",
