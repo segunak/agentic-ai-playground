@@ -154,6 +154,82 @@ function executeGetCharlotteCinnamonRollRankings() {
   };
 }
 
+async function executeGetNasaPictureOfTheDay() {
+  try {
+    const response = await fetch(
+      "https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY"
+    );
+    const data = await response.json();
+    return {
+      title: data.title,
+      date: data.date,
+      explanation: data.explanation,
+      imageUrl: data.url,
+      mediaType: data.media_type,
+      source: "NASA Astronomy Picture of the Day (apod.nasa.gov)",
+    };
+  } catch {
+    return { error: "Could not fetch NASA Picture of the Day." };
+  }
+}
+
+async function executeGetInternationalSpaceStationLocation() {
+  try {
+    const response = await fetch("http://api.open-notify.org/iss-now.json");
+    const data = await response.json();
+    return {
+      latitude: data.iss_position.latitude,
+      longitude: data.iss_position.longitude,
+      timestamp: new Date(data.timestamp * 1000).toUTCString(),
+      source: "Open Notify API (open-notify.org)",
+    };
+  } catch {
+    return { error: "Could not fetch ISS location." };
+  }
+}
+
+async function executeGetDadJoke() {
+  try {
+    const response = await fetch("https://icanhazdadjoke.com/", {
+      headers: { Accept: "application/json" },
+    });
+    const data = await response.json();
+    return { joke: data.joke, source: "icanhazdadjoke.com" };
+  } catch {
+    return { joke: "Why don't scientists trust atoms? Because they make up everything!", source: "Fallback joke" };
+  }
+}
+
+async function executeGetDogImage() {
+  try {
+    const response = await fetch("https://dog.ceo/api/breeds/image/random");
+    const data = await response.json();
+    const breed = data.message.split("/")[4] || "unknown";
+    return {
+      imageUrl: data.message,
+      breed: breed.replace(/-/g, " "),
+      source: "Dog CEO API (dog.ceo)",
+    };
+  } catch {
+    return { error: "Could not fetch a dog image." };
+  }
+}
+
+async function executeGetTodayInHistory() {
+  try {
+    const response = await fetch("https://history.muffinlabs.com/date");
+    const data = await response.json();
+    const events = (data.data?.Events || []).slice(0, 5);
+    return {
+      date: data.date,
+      events: events.map((e) => ({ year: e.year, text: e.text })),
+      source: "History Muffin Labs API (history.muffinlabs.com)",
+    };
+  } catch {
+    return { error: "Could not fetch today in history data." };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // AI SDK tool definitions
 // ---------------------------------------------------------------------------
@@ -181,14 +257,39 @@ const ALL_TOOLS = {
     inputSchema: z.object({}),
     execute: async () => executeGetCharlotteCinnamonRollRankings(),
   }),
+  get_nasa_picture_of_the_day: tool({
+    description: "Gets NASA's Astronomy Picture of the Day with a title, explanation, and image URL. Use when someone asks about space photos, astronomy, or NASA.",
+    inputSchema: z.object({}),
+    execute: async () => executeGetNasaPictureOfTheDay(),
+  }),
+  get_international_space_station_location: tool({
+    description: "Gets the current latitude and longitude of the International Space Station. Use when someone asks where the ISS is right now or about its position.",
+    inputSchema: z.object({}),
+    execute: async () => executeGetInternationalSpaceStationLocation(),
+  }),
+  get_dad_joke: tool({
+    description: "Gets a random dad joke. Use when someone asks for a joke, wants to laugh, or needs cheering up.",
+    inputSchema: z.object({}),
+    execute: async () => executeGetDadJoke(),
+  }),
+  get_dog_image: tool({
+    description: "Gets a random dog image URL with the breed name. Use when someone asks about dogs, wants to see a cute animal, or needs a pick-me-up.",
+    inputSchema: z.object({}),
+    execute: async () => executeGetDogImage(),
+  }),
+  get_today_in_history: tool({
+    description: "Gets notable historical events that happened on today's date. Use when someone asks about history, what happened today, or historical trivia.",
+    inputSchema: z.object({}),
+    execute: async () => executeGetTodayInHistory(),
+  }),
 };
 
 // ---------------------------------------------------------------------------
 // Dynamic system prompt
 // ---------------------------------------------------------------------------
 
-function buildSystemPrompt(enabledToolNames) {
-  if (enabledToolNames.length === 0) {
+function buildSystemPrompt(enabledToolNames, customInstructions) {
+  if (enabledToolNames.length === 0 && !customInstructions) {
     return `You are a Data Assistant. You can only answer from what you learned during training. You have no tools available.
 
 If someone asks for real-time information like current weather or recent events after your training cutoff, be honest that you're working from training data and may not have current information. Do your best to help with what you know.
@@ -201,6 +302,11 @@ Be concise, friendly, and professional.`;
     get_people_in_space: "find out who is currently in space",
     get_recent_earthquakes: "check for significant recent earthquakes worldwide",
     get_charlotte_cinnamon_roll_rankings: "look up cinnamon roll rankings for Charlotte, NC",
+    get_nasa_picture_of_the_day: "get NASA's Astronomy Picture of the Day",
+    get_international_space_station_location: "find the current location of the International Space Station",
+    get_dad_joke: "get a random dad joke",
+    get_dog_image: "get a random dog image",
+    get_today_in_history: "find out what happened on this day in history",
   };
 
   const available = enabledToolNames
@@ -208,7 +314,7 @@ Be concise, friendly, and professional.`;
     .map((name) => toolDescriptions[name]);
 
   return `You are a Data Assistant built for the workshop "Agentic AI: From Acronyms to Applications" by Segun Akinyemi.
-
+${customInstructions ? `\nPersonality: ${customInstructions}\n` : ""}
 You have ${available.length} tool${available.length === 1 ? "" : "s"} available: ${available.join(", ")}.
 
 Use your tools when the user's question calls for it. When sharing cinnamon roll rankings, be enthusiastic and share the hot take. Be concise, friendly, and professional.`;
@@ -271,7 +377,7 @@ export default async function handler(req) {
     }
   }
 
-  const { messages = [], enabledTools = [] } = body;
+  const { messages = [], enabledTools = [], customInstructions = "" } = body;
 
   if (!messages.length) {
     return Response.json(
@@ -288,7 +394,7 @@ export default async function handler(req) {
       }
     }
 
-    const systemPrompt = buildSystemPrompt(enabledTools);
+    const systemPrompt = buildSystemPrompt(enabledTools, customInstructions);
 
     const result = streamText({
       model: azure("gpt-5-mini"),

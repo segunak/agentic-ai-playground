@@ -12,7 +12,7 @@ There's a definition that's gained consensus in the [AI Engineering](https://www
 
 ## What Is This?
 
-A web-based Agent Playground that lets workshop participants interact with a real AI agent powered by [Microsoft Foundry](https://learn.microsoft.com/azure/ai-foundry/what-is-foundry). The playground visualizes the agent's **tool-calling loop** in real time, showing when the AI autonomously decides to call tools, what results it gets back, and how it synthesizes a final response.
+A web-based Agent Playground that lets workshop participants interact with a real AI agent powered by [Microsoft Foundry](https://learn.microsoft.com/azure/ai-foundry/what-is-foundry) on Azure. Built with the [Vercel AI SDK](https://ai-sdk.dev/) and hosted on [Vercel](https://vercel.com/), the playground visualizes the agent's **tool-calling loop** in real time, showing when the AI autonomously decides to call tools, what results it gets back, and how it synthesizes a final response.
 
 This is the hands-on component of the workshop, embedded inside a [VS Code for Education](https://vscodeedu.com) course.
 
@@ -46,7 +46,7 @@ flowchart LR
 
 ## Tools
 
-The agent has access to four tools:
+The agent has access to nine tools:
 
 | Tool | Description |
 |------|-------------|
@@ -54,8 +54,13 @@ The agent has access to four tools:
 | `get_people_in_space` | Who is currently in space right now (via [Open Notify](http://open-notify.org/)) |
 | `get_recent_earthquakes` | Significant earthquakes from the past 7 days worldwide (via [USGS](https://earthquake.usgs.gov/)) |
 | `get_charlotte_cinnamon_roll_rankings` | Returns my definitive cinnamon roll rankings for Charlotte, NC |
+| `get_nasa_picture_of_the_day` | NASA's Astronomy Picture of the Day (via [NASA API](https://api.nasa.gov/)) |
+| `get_international_space_station_location` | Current latitude/longitude of the International Space Station (via [Open Notify](http://open-notify.org/)) |
+| `get_dad_joke` | A random dad joke (via [icanhazdadjoke](https://icanhazdadjoke.com/)) |
+| `get_dog_image` | A random dog image with breed (via [Dog CEO](https://dog.ceo/)) |
+| `get_today_in_history` | Notable events on today's date (via [History Muffin Labs](https://history.muffinlabs.com/)) |
 
-Three of these tools hit live external APIs (weather, astronauts, earthquakes). One returns local data (cinnamon rolls from my strong opinions). The LLM decides when and which tool to call autonomously. That autonomous decision-making is what makes it an agent.
+The first 4 tools are used in Labs 1-3. All 9 are available in Lab 4 where students configure their own custom agents.
 
 ## How It Works
 
@@ -64,6 +69,9 @@ The playground is embedded directly in the workshop course on [VS Code for Educa
 - **Lab 1**: No tools (bare chatbot)
 - **Lab 2**: Weather tool only
 - **Lab 3**: All 4 tools (full agent)
+- **Lab 4**: All 9 tools + custom instructions + recipe cards. Students configure their own agent.
+
+The API also accepts an optional `customInstructions` field that lets students define their agent's personality.
 
 ## Environment Variables (Vercel)
 
