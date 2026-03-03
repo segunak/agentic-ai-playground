@@ -297,6 +297,10 @@ If someone asks for real-time information like current weather or recent events 
 Be concise, friendly, and professional.`;
   }
 
+  if (enabledToolNames.length === 0 && customInstructions) {
+    return `You have no tools enabled. Tell the user they need to enable at least one tool before you can help. Be brief and direct. Do not try to answer their question without tools.`;
+  }
+
   const toolDescriptions = {
     get_weather: "check live weather for any city",
     get_people_in_space: "find out who is currently in space",
