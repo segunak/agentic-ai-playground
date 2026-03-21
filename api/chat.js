@@ -411,6 +411,8 @@ export default async function handler(req) {
   }
 
   const origin = req.headers.get("origin") || "";
+  console.log("DEBUG-ORIGIN:", origin);
+  console.log("DEBUG-REFERER:", req.headers.get("referer"));
   const body = await req.json();
 
   if (!isTrustedOrigin(origin)) {
