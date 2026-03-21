@@ -411,14 +411,13 @@ export default async function handler(req) {
   }
 
   const origin = req.headers.get("origin") || "";
-  console.log("DEBUG-ORIGIN:", origin);
-  console.log("DEBUG-REFERER:", req.headers.get("referer"));
   const body = await req.json();
 
   if (!isTrustedOrigin(origin)) {
     const workshopKey =
       req.headers.get("x-workshop-key") || body?.workshopKey;
     if (!workshopKey || workshopKey !== process.env.WORKSHOP_KEY) {
+      console.log("AUTH-REJECTED origin:", origin);
       return Response.json(
         { error: "Invalid or missing workshop key." },
         { status: 401 }
