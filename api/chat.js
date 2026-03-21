@@ -140,17 +140,23 @@ function executeGetCharlotteCinnamonRollRankings() {
     city: "Charlotte, NC",
     last_updated: "2026",
     rankings: [
-      { rank: 1, name: "Honeybear Bake Shop", note: "Available at Mattie Ruth's Coffee in Concord, otherwise order for pickup only. The best cinnamon rolls in Charlotte, period." },
-      { rank: 2, name: "Sunflour Bakery", note: "Tied for #2. A Charlotte staple." },
-      { rank: 2, name: "Beyond Amazing Donuts", note: "Tied for #2. Their cinnamon rolls are incredible." },
-      { rank: 3, name: "The Batch House", note: "Consistently excellent." },
-      { rank: 4, name: "Knowledge Perk Coffee", note: "A coffee shop that bakes their own cinnamon rolls in house. Hidden gem." },
-      { rank: 5, name: "Sugar Donuts", note: "Also a great spot to buy cinnamon rolls in bulk." },
-      { rank: 6, name: "Cinnaholic", note: "Located in Concord. Think Chipotle but for cinnamon rolls, build your own." },
-      { rank: 7, name: "The Salty Donut", note: "Great cinnamon rolls but very expensive." },
+      { rank: 1, name: "Honeybear Bake Shop", neighborhood: "Clanton Park-Roseland", note: "Available at Mattie Ruth's Coffee in Concord, otherwise order for pickup only. The best cinnamon rolls in Charlotte hands down. The fact that you have to jump through hoops to get them makes them even more special!" },
+      { rank: 2, name: "Sunflour Bakery", neighborhood: "South End, Ballantyne, Plaza Midwood, NoDa, Harrisburg", note: "Tied for #2. The first cinnamon roll I had in Charlotte that led me to believe this city has some potential as far as pastries go. This was my #1 until I encountered Honeybear Bake Shop during a day trip to Concord to hang out at Mattie Ruth's Coffee, where they sell their cinnamon rolls." },
+      { rank: 2, name: "Beyond Amazing Donuts", neighborhood: "Uptown", note: "Tied for #2. Their cinnamon rolls are incredible, black owned business" },
+      { rank: 3, name: "The Batch House", neighborhood: "Seversville", note: "Consistently excellent, and they're creative. They recently have started trying stuff like Biscoff cookie topped cinnamon rolls, cinnamon rolls but hte base is a biscuit not a traditional roll. Cinnamon roll innovators out here dawg. Good stuff." },
+      { rank: 4, name: "Kudzu Bakery and Market", neighborhood: "Dilworth", note: "Lighter dough, not amber but light brown. Less icing than Cinnabon crowds expect, but that's because it's made well. They don't go light on cinnamon though, visible cinnamon chunks cresting on top of the roll. Everything about this cinnamon roll screams made in someone's grandma's oven. It's giving homemade." },
+      { rank: 5, name: "Knowledge Perk Coffee", neighborhood: "Rock Hill, Fort Mill, and Uptown", note: "A coffee shop that bakes their own cinnamon rolls in house. Hidden gem. The base is a croissant sort of roll, then a cream cheese frosting on top. Not visually impressive, it looks a bit flat, but the taste is phenomenal." },
+      { rank: 6, name: "Sugar Donuts", neighborhood: "Ballantyne", note: "This is my go to if I have to buy cinnamon rolls in bulk. They're like Duck Donuts, but for cinnamon rolls. Consistently good. And they have vegan options so you can buy for a diverse crowd." },
+      { rank: 7, name: "Cinnaholic", neighborhood: "Concord Mills", note: "Located in Concord. Think Chipotle but for cinnamon rolls, build your own style. They're vegan and always good, I prefer the Old Skool but they have so many options." },
+      { rank: 8, name: "The Salty Donut", neighborhood: "South End, Ballantyne, Plaza Midwood)", note: "Good cinnamon rolls but very expensive. Like, I wouldn't ever send someone here just for cinnamon rolls, but if you happen to already be in the area, worth a stop." },
     ],
-    hot_take: "Amelie's French Bakery and Cafe has some of the worst cinnamon rolls in Charlotte. The icing lacks flavor, it's almost like toothpaste in texture, and is just flat out not sweet enough. Furthermore, they often over bake their cinnamon rolls. And nationwide chains like Panera Bread and Cinnabon don't count. Cinnabon specifically is a soupy mess. Quantity does not equate to quality. They just drown their cinnamon rolls in icing. Cinnabon is the McDonald's of cinnamon rolls. Most people went to the mall growing up and that's the only cinnamon rolls they had, so they think they're good. They're not. Expand your horizons.",
-    disclaimer: "These are the personal opinions of Segun Akinyemi, workshop facilitator and cinnamon roll enthusiast.",
+    honorable_mentions: [
+      { name: "Cocotte", location: "Cornelius", note: "Hidden gem French bakery. Way better than Amelie's." },
+      { name: "Family Dough Bagels", location: "Mint Hill", note: "Glorious cinnamon rolls but they sell out early. Get there on time." },
+      { name: "Microsoft Charlotte Cafeteria", location: "South Charlotte", note: "Courtesy of in-house baker Amanda Fain. Only available through someone who works at Microsoft. Students visiting through Discovery Days, a recurring field trip program founded in 2022 by Segun Akinyemi that brings middle school through college students to Microsoft Charlotte for hands-on STEM learning and career exploration (learn more: https://aka.ms/discovery-day/flyer), consistently rate them among the best cinnamon rolls they've ever had." },
+    ],
+    hot_take: "Amelie's French Bakery and Cafe has some of the worst cinnamon rolls in Charlotte. The icing lacks flavor, it's almost toothpaste like in texture, and is just flat out not sweet enough. Furthermore, they often over bake their cinnamon rolls. And while they sell cinnamon rolls in Charlotte, nationwide chains like Panera Bread and Cinnabon don't count. Cinnabon specifically is a soupy mess. Quantity does not equate to quality. They just drown their cinnamon rolls in icing. Cinnabon is the McDonald's of cinnamon rolls. Most people went to the mall growing up and that's the only cinnamon rolls they had, so they think they're good. They're not. Expand your horizons.",
+    disclaimer: "These are the personal opinions of Segun Akinyemi, workshop facilitator and cinnamon roll connoisseur.",
   };
 }
 
@@ -227,6 +233,42 @@ async function executeGetTodayInHistory() {
     };
   } catch {
     return { error: "Could not fetch today in history data." };
+  }
+}
+
+async function executePostToLiveFeed(name, message, workshop) {
+  const liveFeedKey = process.env.LIVE_FEED_KEY;
+  if (!liveFeedKey) {
+    return { error: "Live feed posting is not configured." };
+  }
+
+  try {
+    const response = await fetch("https://live.segunakinyemi.com/api/post", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        Name: name.trim(),
+        Message: message.trim(),
+        Workshop: workshop,
+        Tags: "agent-post",
+        WorkshopKey: liveFeedKey,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      return {
+        success: true,
+        message: `Posted to the live feed. Check it out at live.segunakinyemi.com`,
+        name: name.trim(),
+        postedMessage: message.trim(),
+      };
+    } else {
+      return { error: data.error || "Failed to post to live feed." };
+    }
+  } catch {
+    return { error: "Could not reach the live feed." };
   }
 }
 
@@ -311,6 +353,7 @@ Be concise, friendly, and professional.`;
     get_dad_joke: "get a random dad joke",
     get_dog_image: "get a random dog image",
     get_today_in_history: "find out what happened on this day in history",
+    post_to_live_feed: "post a message to the workshop live feed",
   };
 
   const available = enabledToolNames
@@ -381,7 +424,7 @@ export default async function handler(req) {
     }
   }
 
-  const { messages = [], enabledTools = [], customInstructions = "" } = body;
+  const { messages = [], enabledTools = [], customInstructions = "", workshop = "Agentic AI Workshop" } = body;
 
   if (!messages.length) {
     return Response.json(
@@ -393,7 +436,16 @@ export default async function handler(req) {
   try {
     const tools = {};
     for (const name of enabledTools) {
-      if (ALL_TOOLS[name]) {
+      if (name === "post_to_live_feed") {
+        tools[name] = tool({
+          description: "Posts a message with your name to the workshop live feed at live.segunakinyemi.com. Use when someone wants to post something, share a message publicly, or announce something on the live feed.",
+          inputSchema: z.object({
+            name: z.string().describe("The name of the person posting"),
+            message: z.string().describe("The message to post to the live feed"),
+          }),
+          execute: async ({ name, message }) => executePostToLiveFeed(name, message, workshop),
+        });
+      } else if (ALL_TOOLS[name]) {
         tools[name] = ALL_TOOLS[name];
       }
     }

@@ -46,7 +46,7 @@ flowchart LR
 
 ## Tools
 
-The agent has access to nine tools:
+The agent has access to ten tools:
 
 | Tool | Description |
 |------|-------------|
@@ -59,8 +59,9 @@ The agent has access to nine tools:
 | `get_dad_joke` | A random dad joke (via [icanhazdadjoke](https://icanhazdadjoke.com/)) |
 | `get_dog_image` | A random dog image with breed (via [Dog CEO](https://dog.ceo/)) |
 | `get_today_in_history` | Notable events on today's date (via [History Muffin Labs](https://history.muffinlabs.com/)) |
+| `post_to_live_feed` | Posts a message to the workshop live feed at [live.segunakinyemi.com](https://live.segunakinyemi.com) |
 
-The first 4 tools are used in Labs 1-3. All 9 are available in Lab 4 where students configure their own custom agents.
+The first 4 tools are used in Labs 1-3. All 10 are available in Lab 4 where students configure their own custom agents.
 
 ## How It Works
 
@@ -69,7 +70,7 @@ The playground is embedded directly in the workshop course on [VS Code for Educa
 - **Lab 1**: No tools (bare chatbot)
 - **Lab 2**: Weather tool only
 - **Lab 3**: All 4 tools (full agent)
-- **Lab 4**: All 9 tools + custom instructions + recipe cards. Students configure their own agent.
+- **Lab 4**: All 10 tools + custom instructions + recipe cards. Students configure their own agent.
 
 The API also accepts an optional `customInstructions` field that lets students define their agent's personality.
 
