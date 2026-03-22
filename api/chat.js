@@ -236,11 +236,14 @@ async function executeGetTodayInHistory() {
   }
 }
 
-async function executePostToLiveFeed(name, message, workshop) {
+async function executePostToLiveFeed(name, message, workshop, tags) {
   const liveFeedKey = process.env.LIVE_FEED_KEY;
   if (!liveFeedKey) {
     return { error: "Live feed posting is not configured." };
   }
+
+  const baseTags = "agent-post";
+  const allTags = tags ? `${baseTags},${tags.trim()}` : baseTags;
 
   try {
     const response = await fetch("https://live.segunakinyemi.com/api/post", {
@@ -250,7 +253,7 @@ async function executePostToLiveFeed(name, message, workshop) {
         Name: name.trim(),
         Message: message.trim(),
         Workshop: workshop,
-        Tags: "agent-post",
+        Tags: allTags,
         WorkshopKey: liveFeedKey,
       }),
     });
@@ -364,7 +367,8 @@ Be concise, friendly, and professional.`;
 ${customInstructions ? `\nPersonality: ${customInstructions}\n` : ""}
 You have ${available.length} tool${available.length === 1 ? "" : "s"} available: ${available.join(", ")}.
 
-Use your tools when the user's question calls for it. When sharing cinnamon roll rankings, be enthusiastic and share the hot take. Be concise, friendly, and professional.`;
+Use your tools when the user's question calls for it. When sharing cinnamon roll rankings, be enthusiastic and share the hot take. Be concise, friendly, and professional.
+${enabledToolNames.includes('post_to_live_feed') ? `\nWhen using the live feed tool, you can add optional tags to categorize posts. The tag "agent-post" is always included automatically. If the user asks to add tags, include them. Tags can be anything the user wants, like "fun", "science", "charlotte", "earthquake-update", etc. Encourage creativity with tags if the user seems interested.` : ''}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -439,12 +443,13 @@ export default async function handler(req) {
     for (const name of enabledTools) {
       if (name === "post_to_live_feed") {
         tools[name] = tool({
-          description: "Posts a message with your name to the workshop live feed at live.segunakinyemi.com. Use when someone wants to post something, share a message publicly, or announce something on the live feed.",
+          description: "Posts a message with your name to the workshop live feed at live.segunakinyemi.com. Use when someone wants to post something, share a message publicly, or announce something on the live feed. The mandatory tag 'agent-post' is always included automatically. The user can request additional tags to categorize their post.",
           inputSchema: z.object({
             name: z.string().describe("The name of the person posting"),
             message: z.string().describe("The message to post to the live feed"),
+            tags: z.string().optional().describe("Optional comma-separated tags to add to the post. The tag 'agent-post' is always included automatically. Add any other tags the user requests."),
           }),
-          execute: async ({ name, message }) => executePostToLiveFeed(name, message, workshop),
+          execute: async ({ name, message, tags }) => executePostToLiveFeed(name, message, workshop, tags),
         });
       } else if (ALL_TOOLS[name]) {
         tools[name] = ALL_TOOLS[name];
