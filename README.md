@@ -56,7 +56,6 @@ The agent has access to ten tools:
 | `get_charlotte_cinnamon_roll_rankings` | Returns my definitive cinnamon roll rankings for Charlotte, NC |
 | `get_nasa_picture_of_the_day` | NASA's Astronomy Picture of the Day (via [NASA API](https://api.nasa.gov/)) |
 | `get_international_space_station_location` | Current latitude/longitude of the International Space Station (via [Open Notify](http://open-notify.org/)) |
-| `get_dad_joke` | A random dad joke (via [icanhazdadjoke](https://icanhazdadjoke.com/)) |
 | `get_dog_image` | A random dog image with breed (via [Dog CEO](https://dog.ceo/)) |
 | `get_today_in_history` | Notable events on today's date (via [History Muffin Labs](https://history.muffinlabs.com/)) |
 | `post_to_live_feed` | Posts a message to the workshop live feed at [live.segunakinyemi.com](https://live.segunakinyemi.com) |
