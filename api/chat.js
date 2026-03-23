@@ -140,7 +140,7 @@ function executeGetCharlotteCinnamonRollRankings() {
     city: "Charlotte, NC",
     last_updated: "2026",
     rankings: [
-      { rank: 1, name: "Honeybear Bake Shop", neighborhood: "Clanton Park-Roseland", note: "Available at Mattie Ruth's Coffee in Concord, otherwise order for pickup only. The best cinnamon rolls in Charlotte hands down. The fact that you have to jump through hoops to get them makes them even more special!" },
+      { rank: 1, name: "Honeybear Bake Shop", neighborhood: "Clanton Park-Roseland", note: "Order ahead only, but you can usually find their cinnamon rolls in the mornings at Mattie Ruth's Coffee Shop in Concord. The best cinnamon rolls in Charlotte hands down. The fact that you have to jump through hoops to get them makes them even more special!" },
       { rank: 2, name: "Sunflour Bakery", neighborhood: "South End, Ballantyne, Plaza Midwood, NoDa, Harrisburg", note: "Tied for #2. The first cinnamon roll I had in Charlotte that led me to believe this city has some potential as far as pastries go. This was my #1 until I encountered Honeybear Bake Shop during a day trip to Concord to hang out at Mattie Ruth's Coffee, where they sell their cinnamon rolls." },
       { rank: 2, name: "Beyond Amazing Donuts", neighborhood: "Uptown", note: "Tied for #2. Their cinnamon rolls are incredible, black owned business" },
       { rank: 3, name: "The Batch House", neighborhood: "Seversville", note: "Consistently excellent, and they're creative. They recently have started trying stuff like Biscoff cookie topped cinnamon rolls, cinnamon rolls but hte base is a biscuit not a traditional roll. Cinnamon roll innovators out here dawg. Good stuff." },
