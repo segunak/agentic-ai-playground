@@ -226,11 +226,11 @@ async function executeGetCharlotteThirdPlaces(query) {
         delete place.operatingHours;
         delete place.purchaseRequired;
         delete place.parking;
-        if (place.description && place.description.length > 500) {
-          place.description = place.description.slice(0, 500) + "...";
+        if (place.description && place.description.length > 200) {
+          place.description = place.description.slice(0, 200) + "...";
         }
-        if (place.comments && place.comments.length > 1500) {
-          place.comments = place.comments.slice(0, 1500) + "...";
+        if (place.comments && place.comments.length > 500) {
+          place.comments = place.comments.slice(0, 500) + "...";
         }
         return place;
       });
@@ -257,12 +257,12 @@ async function executeGetCharlotteThirdPlaces(query) {
       });
     }
 
-    // Build selection: featured first, then keyword matches, then random fill
+    // Build selection: featured first, then keyword matches, then random fill (7 candidates for LLM to curate)
     const selected = [];
     const seen = new Set();
 
     function addPlace(p) {
-      if (selected.length >= 5 || seen.has(p.name)) return;
+      if (selected.length >= 7 || seen.has(p.name)) return;
       seen.add(p.name);
       selected.push(p);
     }
@@ -352,7 +352,7 @@ function executeGetSegunsFavoriteAnime() {
     favorites: [
       {
         title: "Naruto",
-        thoughts: "Of the big three anime (Naruto, Bleach, One Piece) this is my all time favorite. The story of Naruto resonated so much seeing his rejection and then growth into someone the whole village relied on. Also, as a Black man who grew up in America, there's a lot about Naruto and the way the village views and treats him that I resonate with. Read 'Why The Hood Bangs With Naruto' at https://blacknerdproblems.com/why-the-hood-bangs-with-naruto/ to learn more. My favorite characters outside of Naruto are Omoi, who is one of the only Black characters and a minor character but I still loved every moment he was on screen, and Rock Lee + Might Guy because those brothers are pure determination and hard work. And never forget Might Guy is the only one who had Madara shook. Without that Mangekyo Sharingan Madara would've been cooked!"
+        thoughts: "Of the big three anime (Naruto, Bleach, One Piece) this is my all time favorite. The story of Naruto resonated so much seeing his rejection and then growth into someone the whole village relied on. Also, as a Black man who grew up in America, there's a lot about Naruto and the way the village views and treats him that I resonate with. This article (not by me, but it captures the sentiment perfectly) explains it well: 'Why The Hood Bangs With Naruto' at https://blacknerdproblems.com/why-the-hood-bangs-with-naruto/. My favorite characters outside of Naruto are Omoi, who is one of the only Black characters and a minor character but I still loved every moment he was on screen, and Rock Lee + Might Guy because those brothers are pure determination and hard work. And never forget Might Guy is the only one who had Madara shook. Without that Mangekyo Sharingan Madara would've been cooked!"
       },
       {
         title: "Steins;Gate",
