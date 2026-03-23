@@ -194,18 +194,100 @@ async function executeGetInternationalSpaceStationLocation() {
   }
 }
 
-async function executeGetDogImage() {
+async function executeGetCharlotteThirdPlaces(query) {
   try {
-    const response = await fetch("https://dog.ceo/api/breeds/image/random");
-    const data = await response.json();
-    const breed = data.message.split("/")[4] || "unknown";
+    const response = await fetch("https://www.charlottethirdplaces.com/api/places");
+    const allPlaces = await response.json();
+
+    // Strip heavy fields from each place
+    const stripped = allPlaces
+      .filter((p) => p.operational !== false)
+      .map((p) => {
+        const place = { ...p };
+        delete place.photos;
+        delete place.curatorPhotos;
+        delete place.googleMapsPlaceId;
+        delete place.googleMapsProfileURL;
+        delete place.appleMapsProfileURL;
+        delete place.latitude;
+        delete place.longitude;
+        delete place.createdDate;
+        delete place.lastModifiedDate;
+        delete place.recordId;
+        delete place.operational;
+        delete place.hasReviews;
+        delete place.instagram;
+        delete place.facebook;
+        delete place.twitter;
+        delete place.tiktok;
+        delete place.youtube;
+        delete place.linkedIn;
+        delete place.size;
+        delete place.operatingHours;
+        delete place.purchaseRequired;
+        delete place.parking;
+        if (place.description && place.description.length > 500) {
+          place.description = place.description.slice(0, 500) + "...";
+        }
+        if (place.comments && place.comments.length > 1500) {
+          place.comments = place.comments.slice(0, 1500) + "...";
+        }
+        return place;
+      });
+
+    // Separate featured and non-featured
+    const featured = stripped.filter((p) => p.featured);
+    const nonFeatured = stripped.filter((p) => !p.featured);
+
+    // Keyword matching if query provided
+    let matched = [];
+    if (query) {
+      const q = query.toLowerCase();
+      matched = stripped.filter((p) => {
+        const haystack = [
+          p.name,
+          p.neighborhood,
+          ...(p.type || []),
+          ...(p.tags || []),
+          p.description || "",
+        ]
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(q);
+      });
+    }
+
+    // Build selection: featured first, then keyword matches, then random fill
+    const selected = [];
+    const seen = new Set();
+
+    function addPlace(p) {
+      if (selected.length >= 5 || seen.has(p.name)) return;
+      seen.add(p.name);
+      selected.push(p);
+    }
+
+    // Shuffle helper
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    shuffle(featured).forEach(addPlace);
+    shuffle(matched).forEach(addPlace);
+    shuffle(nonFeatured).forEach(addPlace);
+
     return {
-      imageUrl: data.message,
-      breed: breed.replace(/-/g, " "),
-      source: "Dog CEO API (dog.ceo)",
+      count: selected.length,
+      query: query || null,
+      places: selected,
+      source: "Charlotte Third Places (charlottethirdplaces.com) - A project by Segun Akinyemi",
     };
   } catch {
-    return { error: "Could not fetch a dog image." };
+    return { error: "Could not fetch Charlotte Third Places data." };
   }
 }
 
@@ -338,10 +420,12 @@ const ALL_TOOLS = {
     inputSchema: z.object({}),
     execute: async () => executeGetInternationalSpaceStationLocation(),
   }),
-  get_dog_image: tool({
-    description: "Gets a random dog image with breed name.",
-    inputSchema: z.object({}),
-    execute: async () => executeGetDogImage(),
+  get_charlotte_third_places: tool({
+    description: "Gets a curated selection of third places (cafes, libraries, parks, and other community hangout spots) in Charlotte, NC from charlottethirdplaces.com.",
+    inputSchema: z.object({
+      query: z.string().optional().describe("Optional keyword to filter places by name, neighborhood, type, or tags, e.g. 'NoDa', 'coffee', 'South End', 'coworking'"),
+    }),
+    execute: async ({ query }) => executeGetCharlotteThirdPlaces(query),
   }),
   get_today_in_history: tool({
     description: "Gets notable historical events that happened on today's date.",
@@ -379,7 +463,7 @@ Keep every response short. A few sentences at most.`;
     get_charlotte_cinnamon_roll_rankings: "look up cinnamon roll rankings for Charlotte, NC",
     get_nasa_picture_of_the_day: "get NASA's Astronomy Picture of the Day",
     get_international_space_station_location: "find the current location of the International Space Station",
-    get_dog_image: "get a random dog image",
+    get_charlotte_third_places: "look up third places (cafes, libraries, parks, hangout spots) in Charlotte, NC",
     get_today_in_history: "find out what happened on this day in history",
     get_segun_favorite_anime: "look up Segun Akinyemi's favorite anime with his personal thoughts",
     post_to_live_feed: "post a message to the workshop live feed",
