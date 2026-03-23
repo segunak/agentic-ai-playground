@@ -9,7 +9,8 @@
       "headers": [
         { "key": "Access-Control-Allow-Origin", "value": "*" },
         { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, X-Workshop-Key" }
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, X-Workshop-Key" },
+        { "key": "Access-Control-Max-Age", "value": "3600" }
       ]
     }
   ]
