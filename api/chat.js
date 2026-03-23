@@ -367,7 +367,7 @@ Be concise, friendly, and professional.`;
 ${customInstructions ? `\nPersonality: ${customInstructions}\n` : ""}
 You have ${available.length} tool${available.length === 1 ? "" : "s"} available: ${available.join(", ")}.
 
-Use your tools when the user's question calls for it. When sharing cinnamon roll rankings, be enthusiastic and share the hot take. Be concise, friendly, and professional.
+Use your tools when the user's question calls for it. When sharing cinnamon roll rankings, be enthusiastic and share the hot take. Keep your answers concise and to the point. Avoid tangents, filler, and overly long responses. Say what needs to be said, then stop.
 ${enabledToolNames.includes('post_to_live_feed') ? `\nWhen using the live feed tool, you can add optional tags to categorize posts. The tag "agent-post" is always included automatically. If the user asks to add tags, include them. Tags can be anything the user wants, like "fun", "science", "charlotte", "earthquake-update", etc. Encourage creativity with tags if the user seems interested.` : ''}`;
 }
 
