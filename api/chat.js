@@ -1,7 +1,7 @@
 import { streamText, tool, stepCountIs } from "ai";
 import { createAzure } from "@ai-sdk/azure";
 import { z } from "zod";
-import charlotteThirdPlaces from "./charlotte-third-places.json" with { type: "json" };
+import charlotteThirdPlaces from "./charlotte-third-places.json" assert { type: "json" };
 
 export const config = { runtime: "edge" };
 
@@ -213,6 +213,7 @@ function executeGetCharlotteThirdPlaces(query) {
         ...(p.type || []),
         ...(p.tags || []),
         p.description || "",
+        p.comments || "",
       ]
         .join(" ")
         .toLowerCase();
