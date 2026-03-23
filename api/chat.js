@@ -198,10 +198,6 @@ async function executeGetInternationalSpaceStationLocation() {
 function executeGetCharlotteThirdPlaces(query) {
   const allPlaces = charlotteThirdPlaces;
 
-  // Separate featured and non-featured
-  const featured = allPlaces.filter((p) => p.featured);
-  const nonFeatured = allPlaces.filter((p) => !p.featured);
-
   // Keyword matching if query provided
   let matched = [];
   if (query) {
@@ -221,7 +217,7 @@ function executeGetCharlotteThirdPlaces(query) {
     });
   }
 
-  // Build selection: featured first, then keyword matches, then random fill (7 candidates for LLM to curate)
+  // Build selection: keyword matches first, then random fill (7 candidates for LLM to curate)
   const selected = [];
   const seen = new Set();
 
@@ -240,9 +236,8 @@ function executeGetCharlotteThirdPlaces(query) {
     return arr;
   }
 
-  shuffle(featured).forEach(addPlace);
   shuffle(matched).forEach(addPlace);
-  shuffle(nonFeatured).forEach(addPlace);
+  shuffle([...allPlaces]).forEach(addPlace);
 
   return {
     count: selected.length,
