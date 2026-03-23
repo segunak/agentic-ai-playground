@@ -263,6 +263,44 @@ async function executePostToLiveFeed(name, message, workshop, tags) {
   }
 }
 
+function executeGetSegunsFavoriteAnime() {
+  return {
+    source: "Segun Akinyemi's Personal Anime Rankings",
+    note: "These are the personal favorites of Segun Akinyemi, workshop facilitator and lifelong anime fan.",
+    favorites: [
+      {
+        title: "Naruto",
+        thoughts: "Of the big three anime (Naruto, Bleach, One Piece) this is my all time favorite. The story of Naruto resonated so much seeing his rejection and then growth into someone the whole village relied on. Also, as a Black man who grew up in America, there's a lot about Naruto and the way the village views and treats him that I resonate with. Read 'Why The Hood Bangs With Naruto' at https://blacknerdproblems.com/why-the-hood-bangs-with-naruto/ to learn more. My favorite characters outside of Naruto are Omoi, who is one of the only Black characters and a minor character but I still loved every moment he was on screen, and Rock Lee + Might Guy because those brothers are pure determination and hard work. And never forget Might Guy is the only one who had Madara shook. Without that Mangekyo Sharingan Madara would've been cooked!"
+      },
+      {
+        title: "Steins;Gate",
+        thoughts: "This is a short anime, unlike Naruto, and if you're into pure science fiction without the fantasy, straight up science fiction, this is for you. Time travel, mystery, friends battling through it all, and a smattering of what I think is one of the best anime romances ever. It's all here. Watching this made me feel like I'd graduated to a more mature form of anime, that's just as fun and silly as the others, but tells a story that doesn't need fight scenes and power ups to keep you on the edge of your seat. It's a different flavor of anime, but it's so good. I won't say anything else and spoil it, but just watch it. It's a masterpiece.",
+      },
+      {
+        title: "Dragon Ball Z",
+        thoughts: "You can't not love it. Nobody should ever say it has the best storytelling structure ever but the fights, the iconic personas of Goku and Vegeta, and my boy Krillin still showing up to bang no matter what, you can't not love it! I will say though, Goku is a terrible father. He's always off saving the world and leaving Chi Chi to raise the kids alone. And then when he is around, he's not really present. He's just like 'oh hey I'm here but I'm not really gonna help out with anything, just gonna do my own thing and maybe spar with you a little bit'. Vegeta isn't all that much better but he at least tries to be a present father, even if he's not the best at it. Also I will always rock with the Prince of All Saiyans, I don't care that Goku is Toriyama's favorite, Vegeta is mine!",
+      },
+      {
+        title: "Attack on Titan",
+        thoughts: "You can find my thoughts on the finale at https://segunakinyemi.com/blog/attack-on-titan-cemented-greatness/. I think it's one of the greatest anime of all time and watching without spoilers and seeing how well it all ties together and the foreshadowing is insane. I started this in college when I was so broke I had to watch anime on the computers in the library and sneak back into the building after close to keep watching episodes, couldn't afford a laptop. I really resonate with this anime overall, not even any particular character, just the quality of the story, although Commander Erwin is my favorite. Everything for the squad man, he put it all on the line.",
+      },
+      {
+        title: "Legend of the Galactic Heroes",
+        thoughts: "Had a profound impact on me as one of the first more mature anime in terms of not being Shounen (targeted at teen males) and instead being Seinen (targeted at adult males). I had so many interesting conversations, online, in person, and with myself, about the philosophies in this anime, the role of government, the horrors of war, what it means to govern, so much. Yang Wen-li is someone I look up to, and Reinhard von Lohengramm as well in a different way. They both had so much honor, coming from such vastly different backgrounds. It's an all time classic!",
+      },
+      {
+        title: "Pokemon",
+        thoughts: "The cultural impact is insane. Pokemon 3 the Movie (https://en.wikipedia.org/wiki/Pok%C3%A9mon_3:_The_Movie) meant a lot to me. Seeing Entei come in with the legendary dogs man, just the moments, the thought that all hope was lost, it was huge! You can't talk anime and leave out Pokemon and the work it did to normalize anime in America. It continues to this day to be insanely popular. I won't say I'm a huge Pokemon fan (I don't collect cards), but I have a lot of love for the franchise and the impact it had on me and so many others growing up.",
+      },
+      {
+        title: "Vinland Saga",
+        thoughts: "It hasn't finished yet, but man I really do think this is going to be another of those greats. I am so invested in the story, as a devout Christian, I really love the journey it goes on helping the main character see the good and bad of religion, of the core philosophy behind non-violence but not to an end that means you stop defending the weak and innocent and yourself. The fights are incredible of course, but it's so much deeper than that, and I can't wait to see it run its full course!",
+      },
+    ],
+    disclaimer: "These are the personal opinions of Segun Akinyemi, workshop facilitator and anime enthusiast.",
+  };
+}
+
 // ---------------------------------------------------------------------------
 // AI SDK tool definitions
 // ---------------------------------------------------------------------------
@@ -310,6 +348,11 @@ const ALL_TOOLS = {
     inputSchema: z.object({}),
     execute: async () => executeGetTodayInHistory(),
   }),
+  get_segun_favorite_anime: tool({
+    description: "Returns Segun Akinyemi's favorite anime list with personal thoughts on each.",
+    inputSchema: z.object({}),
+    execute: async () => executeGetSegunsFavoriteAnime(),
+  }),
 };
 
 // ---------------------------------------------------------------------------
@@ -338,6 +381,7 @@ Keep every response short. A few sentences at most.`;
     get_international_space_station_location: "find the current location of the International Space Station",
     get_dog_image: "get a random dog image",
     get_today_in_history: "find out what happened on this day in history",
+    get_segun_favorite_anime: "look up Segun Akinyemi's favorite anime with his personal thoughts",
     post_to_live_feed: "post a message to the workshop live feed",
   };
 
@@ -349,7 +393,7 @@ Keep every response short. A few sentences at most.`;
 ${customInstructions ? `\nPersonality and behavior: ${customInstructions}\nFollow the personality instructions above. If they ask for longer, more detailed, or more expressive responses, do that. The personality instructions take priority over the default brevity guidance below.\n` : ""}
 You have ${available.length} tool${available.length === 1 ? "" : "s"} available: ${available.join(", ")}.
 
-Use your tools when the user's question calls for it. When sharing cinnamon roll rankings, be enthusiastic and share the hot take. By default, keep your answers concise and to the point. Avoid tangents, filler, and overly long responses. Say what needs to be said, then stop.
+Use your tools when the user's question calls for it. When sharing cinnamon roll rankings, be enthusiastic and share the hot take. When sharing anime recommendations, include the URLs from the tool data so the user can click through. When any URL appears in your response, always format it as a markdown link like [descriptive text](url) instead of showing the raw URL. By default, keep your answers concise and to the point. Avoid tangents, filler, and overly long responses. Say what needs to be said, then stop.
 ${enabledToolNames.includes('post_to_live_feed') ? `\nWhen using the live feed tool, you can add optional tags to categorize posts. The tag "agent-post" is always included automatically. If the user asks to add tags, include them. Tags can be anything the user wants, like "fun", "science", "charlotte", "earthquake-update", etc. Encourage creativity with tags if the user seems interested.` : ''}`;
 }
 
