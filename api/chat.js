@@ -1,6 +1,7 @@
 import { streamText, tool, stepCountIs } from "ai";
 import { createAzure } from "@ai-sdk/azure";
 import { z } from "zod";
+import charlotteThirdPlaces from "./charlotte-third-places.json" with { type: "json" };
 
 export const config = { runtime: "edge" };
 
@@ -194,101 +195,60 @@ async function executeGetInternationalSpaceStationLocation() {
   }
 }
 
-async function executeGetCharlotteThirdPlaces(query) {
-  try {
-    const response = await fetch("https://www.charlottethirdplaces.com/api/places");
-    const allPlaces = await response.json();
+function executeGetCharlotteThirdPlaces(query) {
+  const allPlaces = charlotteThirdPlaces;
 
-    // Strip heavy fields from each place
-    const stripped = allPlaces
-      .filter((p) => p.operational !== false)
-      .map((p) => {
-        const place = { ...p };
-        delete place.photos;
-        delete place.curatorPhotos;
-        delete place.googleMapsPlaceId;
-        delete place.googleMapsProfileURL;
-        delete place.appleMapsProfileURL;
-        delete place.latitude;
-        delete place.longitude;
-        delete place.createdDate;
-        delete place.lastModifiedDate;
-        delete place.recordId;
-        delete place.operational;
-        delete place.hasReviews;
-        delete place.instagram;
-        delete place.facebook;
-        delete place.twitter;
-        delete place.tiktok;
-        delete place.youtube;
-        delete place.linkedIn;
-        delete place.size;
-        delete place.operatingHours;
-        delete place.purchaseRequired;
-        delete place.parking;
-        if (place.description && place.description.length > 200) {
-          place.description = place.description.slice(0, 200) + "...";
-        }
-        if (place.comments && place.comments.length > 500) {
-          place.comments = place.comments.slice(0, 500) + "...";
-        }
-        return place;
-      });
+  // Separate featured and non-featured
+  const featured = allPlaces.filter((p) => p.featured);
+  const nonFeatured = allPlaces.filter((p) => !p.featured);
 
-    // Separate featured and non-featured
-    const featured = stripped.filter((p) => p.featured);
-    const nonFeatured = stripped.filter((p) => !p.featured);
-
-    // Keyword matching if query provided
-    let matched = [];
-    if (query) {
-      const q = query.toLowerCase();
-      matched = stripped.filter((p) => {
-        const haystack = [
-          p.name,
-          p.neighborhood,
-          ...(p.type || []),
-          ...(p.tags || []),
-          p.description || "",
-        ]
-          .join(" ")
-          .toLowerCase();
-        return haystack.includes(q);
-      });
-    }
-
-    // Build selection: featured first, then keyword matches, then random fill (7 candidates for LLM to curate)
-    const selected = [];
-    const seen = new Set();
-
-    function addPlace(p) {
-      if (selected.length >= 7 || seen.has(p.name)) return;
-      seen.add(p.name);
-      selected.push(p);
-    }
-
-    // Shuffle helper
-    function shuffle(arr) {
-      for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-      }
-      return arr;
-    }
-
-    shuffle(featured).forEach(addPlace);
-    shuffle(matched).forEach(addPlace);
-    shuffle(nonFeatured).forEach(addPlace);
-
-    return {
-      count: selected.length,
-      query: query || null,
-      places: selected,
-      source: "Charlotte Third Places (charlottethirdplaces.com) - A project by Segun Akinyemi",
-    };
-  } catch {
-    return { error: "Could not fetch Charlotte Third Places data." };
+  // Keyword matching if query provided
+  let matched = [];
+  if (query) {
+    const q = query.toLowerCase();
+    matched = allPlaces.filter((p) => {
+      const haystack = [
+        p.name,
+        p.neighborhood,
+        ...(p.type || []),
+        ...(p.tags || []),
+        p.description || "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(q);
+    });
   }
+
+  // Build selection: featured first, then keyword matches, then random fill (7 candidates for LLM to curate)
+  const selected = [];
+  const seen = new Set();
+
+  function addPlace(p) {
+    if (selected.length >= 7 || seen.has(p.name)) return;
+    seen.add(p.name);
+    selected.push(p);
+  }
+
+  // Shuffle helper
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  shuffle(featured).forEach(addPlace);
+  shuffle(matched).forEach(addPlace);
+  shuffle(nonFeatured).forEach(addPlace);
+
+  return {
+    count: selected.length,
+    query: query || null,
+    places: selected,
+    source: "Charlotte Third Places (charlottethirdplaces.com) - A project by Segun Akinyemi",
+  };
 }
 
 async function executeGetTodayInHistory() {
