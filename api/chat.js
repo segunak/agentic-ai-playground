@@ -573,7 +573,7 @@ export default async function handler(req) {
       system: systemPrompt,
       messages,
       tools: Object.keys(tools).length > 0 ? tools : undefined,
-      stopWhen: stepCountIs(5),
+      stopWhen: stepCountIs(3),
     });
 
     // Stream custom SSE from fullStream for our embedded client.
