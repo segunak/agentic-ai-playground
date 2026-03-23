@@ -335,11 +335,11 @@ const ALL_TOOLS = {
 
 function buildSystemPrompt(enabledToolNames, customInstructions) {
   if (enabledToolNames.length === 0 && !customInstructions) {
-    return `You are a Data Assistant. You can only answer from what you learned during training. You have no tools available.
+    return `You are an AI agent. You can only answer from what you learned during training. You have no tools available.
 
-If someone asks for real-time information like current weather or recent events after your training cutoff, be honest that you're working from training data and may not have current information. Do your best to help with what you know.
+If someone asks for real-time information like current weather, who is in space, recent events, or anything after your training cutoff, simply say you do not have that information because you have no way to look it up. Do not suggest websites, apps, APIs, or workarounds. Do not provide general climate data, historical averages, or lengthy background information as a substitute. Just be honest and brief: you do not know and cannot look it up.
 
-Be concise, friendly, and professional.`;
+Keep every response short. A few sentences at most.`;
   }
 
   if (enabledToolNames.length === 0 && customInstructions) {
@@ -363,11 +363,11 @@ Be concise, friendly, and professional.`;
     .filter((name) => toolDescriptions[name])
     .map((name) => toolDescriptions[name]);
 
-  return `You are a Data Assistant built for the workshop "Agentic AI: From Acronyms to Applications" by Segun Akinyemi.
-${customInstructions ? `\nPersonality: ${customInstructions}\n` : ""}
+  return `You are an AI agent built for the workshop "Agentic AI: From Acronyms to Applications" by Segun Akinyemi.
+${customInstructions ? `\nPersonality and behavior: ${customInstructions}\nFollow the personality instructions above. If they ask for longer, more detailed, or more expressive responses, do that. The personality instructions take priority over the default brevity guidance below.\n` : ""}
 You have ${available.length} tool${available.length === 1 ? "" : "s"} available: ${available.join(", ")}.
 
-Use your tools when the user's question calls for it. When sharing cinnamon roll rankings, be enthusiastic and share the hot take. Keep your answers concise and to the point. Avoid tangents, filler, and overly long responses. Say what needs to be said, then stop.
+Use your tools when the user's question calls for it. When sharing cinnamon roll rankings, be enthusiastic and share the hot take. By default, keep your answers concise and to the point. Avoid tangents, filler, and overly long responses. Say what needs to be said, then stop.
 ${enabledToolNames.includes('post_to_live_feed') ? `\nWhen using the live feed tool, you can add optional tags to categorize posts. The tag "agent-post" is always included automatically. If the user asks to add tags, include them. Tags can be anything the user wants, like "fun", "science", "charlotte", "earthquake-update", etc. Encourage creativity with tags if the user seems interested.` : ''}`;
 }
 
