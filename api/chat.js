@@ -339,6 +339,159 @@ function executeGetSegunsFavoriteAnime() {
   };
 }
 
+async function executeWikipediaLookup(topic) {
+  try {
+    const response = await fetch(
+      `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(topic)}&prop=extracts&exintro=true&explaintext=true&format=json&redirects=1`
+    );
+    const data = await response.json();
+    const pages = data.query.pages;
+    const page = Object.values(pages)[0];
+
+    if (page.missing !== undefined) {
+      return { topic, error: `No Wikipedia article found for: ${topic}` };
+    }
+
+    let extract = page.extract || "";
+    if (extract.length > 2000) {
+      extract = extract.slice(0, 2000) + "...";
+    }
+
+    return {
+      title: page.title,
+      summary: extract,
+      url: `https://en.wikipedia.org/wiki/${encodeURIComponent(page.title.replace(/ /g, "_"))}`,
+      source: "Wikipedia (en.wikipedia.org)",
+    };
+  } catch {
+    return { error: "Could not fetch Wikipedia data." };
+  }
+}
+
+async function executeDuckDuckGoSearch(query) {
+  try {
+    const response = await fetch(
+      `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`
+    );
+    const data = await response.json();
+
+    const result = {
+      query,
+      source: "DuckDuckGo Instant Answers (api.duckduckgo.com)",
+    };
+
+    if (data.AbstractText) {
+      result.answer = data.AbstractText;
+      result.answerSource = data.AbstractSource;
+      result.url = data.AbstractURL;
+    }
+
+    const related = (data.RelatedTopics || [])
+      .filter((t) => t.Text)
+      .slice(0, 5)
+      .map((t) => ({ text: t.Text, url: t.FirstURL }));
+
+    if (related.length > 0) {
+      result.relatedTopics = related;
+    }
+
+    if (!result.answer && related.length === 0) {
+      result.message = "No instant answer available for this query. Try a more specific topic.";
+    }
+
+    return result;
+  } catch {
+    return { error: "Could not fetch DuckDuckGo results." };
+  }
+}
+
+async function executeGetCountryInfo(country) {
+  try {
+    const response = await fetch(
+      `https://restcountries.com/v3.1/name/${encodeURIComponent(country)}?fields=name,capital,population,languages,currencies,region,subregion,flags,area`
+    );
+
+    if (!response.ok) {
+      return { country, error: `Could not find country: ${country}` };
+    }
+
+    const data = await response.json();
+    const c = data[0];
+
+    return {
+      name: c.name.common,
+      officialName: c.name.official,
+      capital: c.capital,
+      region: c.region,
+      subregion: c.subregion,
+      population: c.population.toLocaleString(),
+      area: `${c.area.toLocaleString()} km²`,
+      languages: c.languages ? Object.values(c.languages) : [],
+      currencies: c.currencies
+        ? Object.values(c.currencies).map((cur) => `${cur.name} (${cur.symbol})`)
+        : [],
+      flag: c.flags?.svg || c.flags?.png || null,
+      source: "REST Countries API (restcountries.com)",
+    };
+  } catch {
+    return { error: "Could not fetch country information." };
+  }
+}
+
+async function executeGetWorldBankData(country, indicator) {
+  const indicatorMap = {
+    GDP: "NY.GDP.MKTP.CD",
+    Population: "SP.POP.TOTL",
+    "Literacy Rate": "SE.ADT.LITR.ZS",
+    "CO2 Emissions": "EN.ATM.CO2E.PC",
+    "Life Expectancy": "SP.DYN.LE00.IN",
+    Unemployment: "SL.UEM.TOTL.ZS",
+  };
+
+  const indicatorCode = indicatorMap[indicator];
+  if (!indicatorCode) {
+    return { error: `Unknown indicator: ${indicator}. Choose from: ${Object.keys(indicatorMap).join(", ")}` };
+  }
+
+  try {
+    // Resolve country name to ISO code via REST Countries
+    const countryRes = await fetch(
+      `https://restcountries.com/v3.1/name/${encodeURIComponent(country)}?fields=cca3,name`
+    );
+
+    if (!countryRes.ok) {
+      return { country, error: `Could not find country: ${country}` };
+    }
+
+    const countryData = await countryRes.json();
+    const isoCode = countryData[0].cca3;
+    const countryName = countryData[0].name.common;
+
+    const response = await fetch(
+      `https://api.worldbank.org/v2/country/${isoCode}/indicator/${indicatorCode}?format=json&date=2018:2024&per_page=7`
+    );
+    const data = await response.json();
+
+    if (!data[1] || data[1].length === 0) {
+      return { country: countryName, indicator, message: "No data available for this indicator and country." };
+    }
+
+    const entries = data[1]
+      .filter((d) => d.value !== null)
+      .map((d) => ({ year: d.date, value: d.value }));
+
+    return {
+      country: countryName,
+      indicator,
+      indicatorDescription: data[1][0]?.indicator?.value || indicator,
+      data: entries,
+      source: "World Bank Open Data (data.worldbank.org)",
+    };
+  } catch {
+    return { error: "Could not fetch World Bank data." };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // AI SDK tool definitions
 // ---------------------------------------------------------------------------
@@ -393,6 +546,35 @@ const ALL_TOOLS = {
     inputSchema: z.object({}),
     execute: async () => executeGetSegunsFavoriteAnime(),
   }),
+  wikipedia_lookup: tool({
+    description: "Looks up any topic on Wikipedia and returns a summary.",
+    inputSchema: z.object({
+      topic: z.string().describe("The topic to look up on Wikipedia, e.g. 'Machine Learning', 'Charlotte North Carolina', 'Naruto'"),
+    }),
+    execute: async ({ topic }) => executeWikipediaLookup(topic),
+  }),
+  duckduckgo_search: tool({
+    description: "Searches the web for quick answers on any topic using DuckDuckGo.",
+    inputSchema: z.object({
+      query: z.string().describe("The search query, e.g. 'what is agentic AI', 'best programming languages 2026', 'UNC Charlotte'"),
+    }),
+    execute: async ({ query }) => executeDuckDuckGoSearch(query),
+  }),
+  get_country_info: tool({
+    description: "Gets information about any country including capital, population, languages, currencies, and region.",
+    inputSchema: z.object({
+      country: z.string().describe("The country name, e.g. 'Japan', 'Brazil', 'Nigeria'"),
+    }),
+    execute: async ({ country }) => executeGetCountryInfo(country),
+  }),
+  get_world_bank_data: tool({
+    description: "Looks up World Bank economic and development data for any country. Available indicators: GDP, Population, Literacy Rate, CO2 Emissions, Life Expectancy, Unemployment.",
+    inputSchema: z.object({
+      country: z.string().describe("The country name, e.g. 'Japan', 'Brazil', 'Nigeria'"),
+      indicator: z.enum(["GDP", "Population", "Literacy Rate", "CO2 Emissions", "Life Expectancy", "Unemployment"]).describe("The economic indicator to look up"),
+    }),
+    execute: async ({ country, indicator }) => executeGetWorldBankData(country, indicator),
+  }),
 };
 
 // ---------------------------------------------------------------------------
@@ -422,6 +604,10 @@ Keep every response short. A few sentences at most.`;
     get_charlotte_third_places: "look up third places (cafes, libraries, parks, hangout spots) in Charlotte, NC",
     get_today_in_history: "find out what happened on this day in history",
     get_segun_favorite_anime: "look up Segun Akinyemi's favorite anime with his personal thoughts",
+    wikipedia_lookup: "look up any topic on Wikipedia",
+    duckduckgo_search: "search the web for quick answers on any topic",
+    get_country_info: "get information about any country (capital, population, languages, currency)",
+    get_world_bank_data: "look up World Bank economic data for any country (GDP, population, literacy, CO2 emissions)",
     post_to_live_feed: "post a message to the workshop live feed",
   };
 

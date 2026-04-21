@@ -58,9 +58,14 @@ The agent has access to ten tools:
 | `get_international_space_station_location` | Current latitude/longitude of the International Space Station (via [Open Notify](http://open-notify.org/)) |
 | `get_charlotte_third_places` | Third places (cafes, libraries, parks, hangout spots) in Charlotte, NC (via [Charlotte Third Places](https://charlottethirdplaces.com)) |
 | `get_today_in_history` | Notable events on today's date (via [History Muffin Labs](https://history.muffinlabs.com/)) |
+| `get_segun_favorite_anime` | Segun Akinyemi's favorite anime list with personal thoughts on each |
+| `wikipedia_lookup` | Look up any topic on Wikipedia (via [Wikipedia API](https://en.wikipedia.org/w/api.php)) |
+| `duckduckgo_search` | Search the web for quick answers on any topic (via [DuckDuckGo](https://api.duckduckgo.com/)) |
+| `get_country_info` | Information about any country: capital, population, languages, currency (via [REST Countries](https://restcountries.com/)) |
+| `get_world_bank_data` | Economic and development data for any country: GDP, population, literacy, CO2 emissions (via [World Bank](https://data.worldbank.org/)) |
 | `post_to_live_feed` | Posts a message to the workshop live feed at [live.segunakinyemi.com](https://live.segunakinyemi.com) |
 
-The first 4 tools are used in Labs 1-3. All 10 are available in Lab 4 where students configure their own custom agents.
+The first 4 tools are used in Labs 1-3. All 14 are available in Lab 4 where students configure their own custom agents.
 
 ## How It Works
 
